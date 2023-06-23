@@ -1,0 +1,22 @@
+[submodule "deps/maestro"]
+	path = deps/maestro
+	url = https://github.com/fchamicapereira/maestro
+[submodule "deps/dpdk"]
+	path = deps/dpdk
+	url = https://github.com/fchamicapereira/dpdk
+	branch = synapse
+[submodule "deps/klee-uclibc"]
+	path = deps/klee-uclibc
+	url = https://github.com/fchamicapereira/klee-uclibc
+	branch = synapse
+[submodule "deps/z3"]
+	path = deps/z3
+	url = https://github.com/fchamicapereira/z3
+	branch = synapse
+[submodule "deps/klee"]
+	path = deps/klee
+	url = https://github.com/fchamicapereira/maestro-klee
+[submodule "deps/llvm"]
+	path = deps/llvm
+	url = https://github.com/fchamicapereira/llvm-project
+	branch = synapse

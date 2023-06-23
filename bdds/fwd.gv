@@ -1,0 +1,19 @@
+digraph mygraph {
+	node [shape=box style=rounded border=0];
+	subgraph clusterprocess {
+		node [style="rounded,filled",color=black];
+		32 [label="32:fwd(0)", fillcolor="chartreuse2"];
+		18 [label="18:packet_return_chunk(\l  p:1074003224,\l  the_chunk:1073755952[(packet_chunks[13])++((packet_chunks[12])++((w96 590143103745)))])", fillcolor="cornflowerblue"];
+		18 -> 32;
+		33 [label="33:fwd(1)", fillcolor="chartreuse2"];
+		24 [label="24:packet_return_chunk(\l  p:1074015488,\l  the_chunk:1073755952[(packet_chunks[13])++((packet_chunks[12])++((w96 1689654731521)))])\l{((VIGOR_DEVICE[3])++((VIGOR_DEVICE[2])++(0)) < 2)}", fillcolor="cornflowerblue"];
+		24 -> 33;
+		16 [shape=Mdiamond, label="16:(0 != VIGOR_DEVICE)", fillcolor="yellow"];
+		16 -> 18 [label="True"];
+		16 -> 24 [label="False"];
+		15 [label="15:packet_borrow_next_chunk(\l  chunk:1074013696[ -> 1073755952],\l  length:14,\l  p:1074003224)\l=>{packet_chunks[packet_chunks]}", fillcolor="cornflowerblue"];
+		15 -> 16;
+		6 [label="6:current_time() -> next_time__6\l=>{next_time__6[next_time__6]}", fillcolor="cornflowerblue"];
+		6 -> 15;
+	}
+}

@@ -1,0 +1,22 @@
+===== VIGOR_BDD_SIG =====
+;;-- kQuery --
+array next_time__6[8] : w32 -> w8 = symbolic
+array VIGOR_DEVICE[4] : w32 -> w8 = symbolic
+(query [] false [
+       (ReadLSB w64 (w32 0) next_time__6)
+       (Ne (w16 0)
+     (ReadLSB w16 (w32 0) VIGOR_DEVICE))
+   ])
+;; -- Nodes --
+27:(0 RETURN_INIT SUCCESS)
+6:(0 CALL current_time()->(ReadLSB w64 (w32 0) next_time__6))
+15:(0 BRANCH (Ne (w16 0)
+     (ReadLSB w16 (w32 0) VIGOR_DEVICE)))
+29:(0 RETURN_PROCESS FWD 0)
+30:(0 RETURN_PROCESS FWD 1)
+;; -- Edges --
+(6->15)
+(15->29->30)
+;; -- Roots --
+init:27
+process:6
