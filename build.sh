@@ -152,7 +152,6 @@ source_install_dpdk() {
 			;;
 		'linux')
 			package_install linux-headers-generic
-			package_install "linux-headers-$(uname -r)"
 			;;
 	esac
 
@@ -175,9 +174,7 @@ source_install_dpdk() {
 		make install -j$BUILDING_CORES \
 			T=x86_64-native-linuxapp-gcc \
 			MAKE_PAUSE=n \
-			DESTDIR=. \
-			CONFIG_RTE_KNI_KMOD=y \
-			CONFIG_RTE_EAL_IGB_UIO=y
+			DESTDIR=.
 	popd
 
 	echo "Done."
