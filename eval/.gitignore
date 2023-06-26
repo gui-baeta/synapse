@@ -1,0 +1,12 @@
+__pycache__
+env
+.venv
+*.pcap
+*.dat
+build
+
+# The stats pcap script generates this file
+.sizes.tsv
+
+# Should not commit the setup config file.
+experiment_config.toml
