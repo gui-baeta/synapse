@@ -185,22 +185,27 @@ source_install_dpdk() {
 		gperf \
 		libgoogle-perftools-dev \
 		libpcap-dev \
-		meson
+		meson \
+		pkg-config
+
+	TARGET=x86_64-native-linuxapp-gcc
+	DPDK_BUILD_DIR="$DPDK_DIR/$TARGET"
 
 	# Ensure environment is correct.
-	add_var_to_paths_file 'RTE_TARGET' 'x86_64-native-linuxapp-gcc'
+	add_var_to_paths_file 'RTE_TARGET' "$TARGET"
 	add_var_to_paths_file 'RTE_SDK' "$DPDK_DIR"
+	add_multiline_var_to_paths_file 'PKG_CONFIG_PATH' "$DPDK_BUILD_DIR/lib/x86_64-linux-gnu/pkgconfig/"
 
 	# shellcheck source=../paths.sh
 	. "$PATHSFILE"
 
 	pushd "$DPDK_DIR"
 		# Compile
-		meson setup build
+		meson setup "$TARGET" --prefix="$DPDK_BUILD_DIR"
 
 		pushd build
 			ninja
-			DESTDIR=$(pwd) ninja install
+			ninja install
 		popd
 	popd
 

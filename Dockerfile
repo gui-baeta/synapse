@@ -78,7 +78,5 @@ RUN cd synapse && \
 # If you want to install additional packages or augment the container in any other way,
 # do it here so that you don't have to rebuild everything from scratch.
 
-RUN sudo pip3 install "numpy"
-
 # Run zsh on open
 CMD [ "/bin/zsh" ]
