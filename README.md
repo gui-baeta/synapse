@@ -1,5 +1,10 @@
 # SyNAPSE
 
+## Tested OSes
+
+- Ubuntu 23.04
+- Ubuntu 22.04
+
 ## Setup
 
 After cloning the repository, pull all the dependencies (configured as submodules):
