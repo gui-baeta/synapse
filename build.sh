@@ -203,7 +203,7 @@ source_install_dpdk() {
 		# Compile
 		meson setup "$TARGET" --prefix="$DPDK_BUILD_DIR"
 
-		pushd build
+		pushd "$DPDK_BUILD_DIR"
 			ninja
 			ninja install
 		popd
