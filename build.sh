@@ -200,7 +200,7 @@ source_install_dpdk() {
 
 		pushd build
 			ninja
-			DESTDIR=. ninja install
+			DESTDIR=$(pwd) ninja install
 		popd
 	popd
 
@@ -226,11 +226,6 @@ source_install_llvm() {
 	echo "Installing LLVM..."
 	
 	package_install bison flex zlib1g-dev libncurses5-dev libpcap-dev python-is-python3
-
-	# Python2 needs to be available as python for some configure scripts, which is not the case in Ubuntu 20.04
-	# if [ ! -e /usr/bin/python ] ; then
-  	# 	sudo ln -s /usr/bin/python3 /usr/bin/python
-	# fi
 
 	add_multiline_var_to_paths_file 'PATH' "$LLVM_DIR/Release/bin:\$PATH"
 	# shellcheck source=../paths.sh
@@ -365,6 +360,7 @@ installation_setup
 
 pip3 install numpy
 pip3 install scapy
+pip3 install wheel
 
 # Install things
 source_install_dpdk
