@@ -1,1 +1,8 @@
+# File containing all the relevant paths
 paths.sh
+
+# Python virtual environment
+env
+
+# Vagrant directory
+.vagrant

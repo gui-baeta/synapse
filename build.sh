@@ -42,6 +42,7 @@ BUILDING_CORES=4
 
 # Versions
 OCAML_RELEASE='4.06.0'
+GCC_VERSION='10'
 
 # Dependencies
 DPDK_DIR="$DEPS_DIR/dpdk"
@@ -108,9 +109,33 @@ create_paths_file() {
 	touch $PATHSFILE
 }
 
+setup_python_venv() {
+	cd $SCRIPT_DIR
+	python3 -m venv env
+	source ./env/bin/activate
+}
+
+set_gcc_version() {
+	package_install gcc-$GCC_VERSION g++-$GCC_VERSION
+
+	sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-$GCC_VERSION 100
+	sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-$GCC_VERSION 100
+
+	sudo update-alternatives --set g++ /usr/bin/g++-$GCC_VERSION
+	sudo update-alternatives --set gcc /usr/bin/gcc-$GCC_VERSION
+
+	sudo update-alternatives --install /usr/bin/cc cc /usr/bin/gcc 100
+	sudo update-alternatives --set cc /usr/bin/gcc
+
+	sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++ 100
+	sudo update-alternatives --set c++ /usr/bin/g++
+}
+
 installation_setup() {
 	create_paths_file
 	source_paths_in_profile
+	setup_python_venv
+	set_gcc_version
 }
 
 # Checks if a variable is set in a file. If it is not in the file, add it with
@@ -159,7 +184,8 @@ source_install_dpdk() {
 	package_install \
 		gperf \
 		libgoogle-perftools-dev \
-		libpcap-dev
+		libpcap-dev \
+		meson
 
 	# Ensure environment is correct.
 	add_var_to_paths_file 'RTE_TARGET' 'x86_64-native-linuxapp-gcc'
@@ -170,11 +196,12 @@ source_install_dpdk() {
 
 	pushd "$DPDK_DIR"
 		# Compile
-		make config T=x86_64-native-linuxapp-gcc MAKE_PAUSE=n
-		make install -j$BUILDING_CORES \
-			T=x86_64-native-linuxapp-gcc \
-			MAKE_PAUSE=n \
-			DESTDIR=.
+		meson setup build
+
+		pushd build
+			ninja
+			DESTDIR=. ninja install
+		popd
 	popd
 
 	echo "Done."
@@ -198,12 +225,12 @@ source_install_z3() {
 source_install_llvm() {
 	echo "Installing LLVM..."
 	
-	package_install bison flex zlib1g-dev libncurses5-dev libpcap-dev
+	package_install bison flex zlib1g-dev libncurses5-dev libpcap-dev python-is-python3
 
 	# Python2 needs to be available as python for some configure scripts, which is not the case in Ubuntu 20.04
-	if [ ! -e /usr/bin/python ] ; then
-  		sudo ln -s /usr/bin/python2.7 /usr/bin/python
-	fi
+	# if [ ! -e /usr/bin/python ] ; then
+  	# 	sudo ln -s /usr/bin/python3 /usr/bin/python
+	# fi
 
 	add_multiline_var_to_paths_file 'PATH' "$LLVM_DIR/Release/bin:\$PATH"
 	# shellcheck source=../paths.sh
@@ -309,7 +336,6 @@ bin_install_ocaml() {
 
 # Environment
 package_sync
-installation_setup
 
 # Common dependencies
 package_install \
@@ -319,9 +345,9 @@ package_install \
 	git \
 	wget \
 	libgoogle-perftools-dev \
-	python2.7 \
 	python3 \
 	python3-pip \
+	python3-venv \
 	parallel \
 	gcc-multilib \
 	graphviz \
@@ -333,6 +359,9 @@ package_install \
 	patch \
 	cloc \
 	time
+
+# Environment after packages are installed
+installation_setup
 
 pip3 install numpy
 pip3 install scapy
