@@ -15,7 +15,7 @@ $ git submodule update --init --recursive
 
 ## Build
 
-Then run the `build.sh` script to build the project from scratch:
+Run the `build.sh` script to build the project from scratch:
 
 ```
 $ ./build.sh
@@ -28,7 +28,7 @@ $ ./build.sh
 Use the docker-compose to build the container.
 
 ```
-docker-compose build
+$ docker-compose build
 ```
 
 This will build an image named `synapse`. Consult the `docker-compose.yml` for more details regarding the image setup. For example, it expects to find both a `.gitconfig` file and a `.ssh` directory on the home directory.
