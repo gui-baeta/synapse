@@ -6,3 +6,9 @@ env
 
 # Vagrant directory
 .vagrant
+
+# IDEs
+.vscode/*
+
+# Mac
+.DS_Store
