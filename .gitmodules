@@ -1,6 +1,3 @@
-[submodule "deps/maestro"]
-	path = deps/maestro
-	url = https://github.com/fchamicapereira/maestro
 [submodule "deps/dpdk"]
 	path = deps/dpdk
 	url = https://github.com/fchamicapereira/dpdk

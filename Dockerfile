@@ -1,4 +1,4 @@
-FROM ubuntu:focal
+FROM --platform=linux/amd64 ubuntu:focal
 
 # https://stackoverflow.com/questions/51023312/docker-having-issues-installing-apt-utils
 ARG DEBIAN_FRONTEND=noninteractive
@@ -66,8 +66,9 @@ RUN echo "source ~/.profile" >> /home/docker/.zshrc
 ###########################
 
 COPY --chown=docker:docker . synapse
+
 RUN cd synapse && \
-    git submodule update --init --recursive \
+    git submodule update --init --recursive && \
     ./build.sh
 
 ###########################
@@ -76,8 +77,6 @@ RUN cd synapse && \
 
 # If you want to install additional packages or augment the container in any other way,
 # do it here so that you don't have to rebuild everything from scratch.
-
-RUN sudo pip3 install "numpy"
 
 # Run zsh on open
 CMD [ "/bin/zsh" ]
