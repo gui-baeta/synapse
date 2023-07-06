@@ -27,7 +27,7 @@ from netexp.helpers import LocalHost, RemoteHost, get_host_from_hostname
 from netexp.pktgen import Pktgen
 from netexp.pktgen.dpdk import DpdkConfig, DpdkPktgen
 
-from set_constants import set_constants
+from util.set_constants import set_constants
 
 console = Console()
 
@@ -44,121 +44,6 @@ CONTROLLER_CMD = "controller_exe $timeout_ms --hw --bench"
 
 P4_COMP_CMD = "build_tools/p4_build.sh"
 # NF_DATAPLANE_PATH = # TODO(sadok)
-
-
-def validate_pcie_dev(
-    host: Union[LocalHost, RemoteHost],
-    pcie_dev: str,
-    log_file: Union[bool, TextIO] = False,
-) -> None:
-    cmd = ["lspci", "-mm"]
-
-    cmd = host.run_command(cmd, print_command=log_file)
-    info = cmd.watch(stdout=log_file, stderr=log_file)
-
-    info = info.split("\n")
-
-    for line in info:
-        line = line.split(" ")
-        device = line[0]
-
-        if device in pcie_dev:
-            return
-
-    print(f'Invalid PCIe device "{pcie_dev}"', file=sys.stderr)
-    exit(1)
-
-
-def get_device_numa_node(
-    host: Union[LocalHost, RemoteHost],
-    pcie_dev: str,
-    log_file: Union[bool, TextIO] = False,
-) -> int:
-    cmd = ["lspci", "-s", pcie_dev, "-vv"]
-    cmd = host.run_command(cmd, print_command=log_file)
-    info = cmd.watch(stdout=log_file, stderr=log_file)
-
-    result = re.search(r"NUMA node: (\d+)", info)
-
-    if not result:
-        return 0
-
-    assert result
-    return int(result.group(1))
-
-
-def get_all_cpus(
-    host: Union[LocalHost, RemoteHost], log_file: Union[bool, TextIO] = False
-) -> list[int]:
-    cmd = ["lscpu"]
-    cmd = host.run_command(cmd, print_command=log_file)
-    info = cmd.watch(stdout=log_file, stderr=log_file)
-
-    result = re.search(r"CPU\(s\):\D+(\d+)", info)
-
-    assert result
-    total_cpus = int(result.group(1))
-
-    return [x for x in range(total_cpus)]
-
-
-def get_numa_node_cpus(
-    host: Union[LocalHost, RemoteHost],
-    node: int,
-    log_file: Union[bool, TextIO] = False,
-):
-    cmd = ["lscpu"]
-    cmd = host.run_command(cmd, print_command=log_file)
-    info = cmd.watch(stdout=log_file, stderr=log_file)
-    info = [line for line in info.split("\n") if "NUMA" in line]
-
-    assert len(info) > 0
-    total_nodes_match = re.search(r"\D+(\d+)", info[0])
-
-    assert total_nodes_match
-    total_nodes = int(total_nodes_match.group(1))
-
-    if node > total_nodes:
-        print(
-            f"Requested NUMA node ({node}) >= available nodes ({total_nodes})",
-            file=sys.stderr,
-        )
-        exit(1)
-
-    if total_nodes == 1:
-        return get_all_cpus(host, log_file=log_file)
-
-    assert len(info) == total_nodes + 1
-    node_info = info[node + 1]
-
-    if "-" in node_info:
-        cpus_match = re.search(r"\D+(\d+)\-(\d+)$", node_info)
-        assert cpus_match
-
-        min_cpu = int(cpus_match.group(1))
-        max_cpu = int(cpus_match.group(2))
-
-        return [cpu for cpu in range(min_cpu, max_cpu + 1)]
-
-    cpus_match = re.search(r"\D+([\d,]+)$", node_info)
-    assert cpus_match
-    return [int(i) for i in cpus_match.groups(0)[0].split(",")]
-
-
-def get_pcie_dev_cpus(
-    host: Union[LocalHost, RemoteHost],
-    pcie_dev: str,
-    log_file: Union[bool, TextIO] = False,
-) -> list[int]:
-    numa = get_device_numa_node(host, pcie_dev, log_file=log_file)
-    cpus = get_numa_node_cpus(host, numa, log_file=log_file)
-    if log_file is True:
-        log_file = sys.stdout
-
-    if log_file:
-        log_file.write(f"[*] PCIe={pcie_dev} NUMA={numa} CPUs={cpus}\n")
-
-    return cpus
 
 
 class Controller:
@@ -625,6 +510,7 @@ async def load_pktgen(
             proc_type="auto",
             pci_allow_list=pcie_devices,
         )
+
         pktgen = DpdkPktgen(
             host,
             dpdk_config,

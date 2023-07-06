@@ -12,12 +12,15 @@ NC='\033[0m' # No Color
 cd $SCRIPT_DIR
 
 # # Make sure all submodules are cloned.
-# git submodule update --init --recursive
+git submodule update --init --recursive
 
 echo "Using python3 from $(which python3)"
 
 # Install requirements.
 python3 -m pip install -r requirements.txt
+
+# Install local netexp
+python3 -m pip install ./util/netexp
 
 # Initialize config.
 if [ ! -f "$DEFAULT_CONFIG_FILE" ]; then

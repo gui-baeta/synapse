@@ -4,9 +4,9 @@
 
 from pathlib import Path
 
+import os
 import click
 import tomli
-
 
 def set_constants(config_file: Path, print_shell_vars: bool = False) -> dict:
     """Set constants for the experiments."""

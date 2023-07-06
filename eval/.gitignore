@@ -4,6 +4,7 @@ env
 *.pcap
 *.dat
 build
+*.log
 
 # The stats pcap script generates this file
 .sizes.tsv

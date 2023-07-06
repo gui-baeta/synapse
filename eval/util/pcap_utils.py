@@ -1,11 +1,16 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
+from pathlib import Path
 from random import randint, sample
 
 from scapy.all import *
 from scapy.utils import PcapWriter
 
+import os
+
 VT100_ERASE_LINE = "\33[2K\r"
+SCRIPT_DIR       = Path(os.path.dirname(os.path.realpath(__file__)))
+DEFAULT_PCAP_DIR = SCRIPT_DIR.parent / Path("pcaps")
 
 def random_mac(blacklist=[]):
 	mac = None
