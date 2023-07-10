@@ -9,13 +9,18 @@
 
 #define CMD_OPT_HELP "help"
 #define CMD_OPT_TOTAL_FLOWS "total-flows"
+#define CMD_OPT_PKT_SIZE "pkt-size"
 #define CMD_OPT_TX_PORT "tx"
 #define CMD_OPT_RX_PORT "rx"
 #define CMD_OPT_NUM_TX_CORES "tx-cores"
 #define CMD_OPT_NUM_RX_CORES "rx-cores"
 #define CMD_OPT_EXP_TIME "exp-time"
+#define CMD_OPT_CRC_UNIQUE_FLOWS "crc-unique-flows"
+#define CMD_OPT_CRC_BITS "crc-bits"
 
-struct config_t config;
+#define DEFAULT_PKT_SIZE MIN_PKT_SIZE
+#define DEFAULT_CRC_UNIQUE_FLOWS false
+#define DEFAULT_CRC_BITS 32
 
 enum {
   /* long options mapped to short options: first long only option value must
@@ -23,11 +28,14 @@ enum {
    */
   CMD_OPT_HELP_NUM = 256,
   CMD_OPT_TOTAL_FLOWS_NUM,
+  CMD_OPT_PKT_SIZE_NUM,
   CMD_OPT_TX_PORT_NUM,
   CMD_OPT_RX_PORT_NUM,
   CMD_OPT_NUM_TX_CORES_NUM,
   CMD_OPT_NUM_RX_CORES_NUM,
   CMD_OPT_EXP_TIME_NUM,
+  CMD_OPT_CRC_UNIQUE_FLOWS_NUM,
+  CMD_OPT_CRC_BITS_NUM,
 };
 
 /* if we ever need short options, add to this string */
@@ -36,11 +44,14 @@ static const char short_options[] = "";
 static const struct option long_options[] = {
     {CMD_OPT_HELP, no_argument, NULL, CMD_OPT_HELP_NUM},
     {CMD_OPT_TOTAL_FLOWS, required_argument, NULL, CMD_OPT_TOTAL_FLOWS_NUM},
+    {CMD_OPT_PKT_SIZE, required_argument, NULL, CMD_OPT_PKT_SIZE_NUM},
     {CMD_OPT_TX_PORT, required_argument, NULL, CMD_OPT_TX_PORT_NUM},
     {CMD_OPT_RX_PORT, required_argument, NULL, CMD_OPT_RX_PORT_NUM},
     {CMD_OPT_NUM_TX_CORES, required_argument, NULL, CMD_OPT_NUM_TX_CORES_NUM},
     {CMD_OPT_NUM_RX_CORES, required_argument, NULL, CMD_OPT_NUM_RX_CORES_NUM},
     {CMD_OPT_EXP_TIME, required_argument, NULL, CMD_OPT_EXP_TIME_NUM},
+    {CMD_OPT_CRC_UNIQUE_FLOWS, no_argument, NULL, CMD_OPT_CRC_UNIQUE_FLOWS_NUM},
+    {CMD_OPT_CRC_BITS, required_argument, NULL, CMD_OPT_CRC_BITS_NUM},
     {NULL, 0, NULL, 0}};
 
 void config_print_usage(char **argv) {
@@ -50,6 +61,8 @@ void config_print_usage(char **argv) {
       "\t[--help]: Show this help and exit\n"
       "\t --" CMD_OPT_TOTAL_FLOWS
       " <#flows>: Total number of flows\n"
+      "\t --" CMD_OPT_PKT_SIZE " <size>: Packet size (bytes) (default=%" PRIu64
+      "B)\n"
       "\t --" CMD_OPT_TX_PORT
       " <port>: TX port\n"
       "\t --" CMD_OPT_RX_PORT
@@ -58,13 +71,18 @@ void config_print_usage(char **argv) {
       " <#cores>: Number of TX cores\n"
       "\t --" CMD_OPT_NUM_RX_CORES
       " <#cores>: Number of RX cores\n"
-      "\t --" CMD_OPT_EXP_TIME " <time>: Flow expiration time (in us)\n",
-      argv[0]);
+      "\t --" CMD_OPT_EXP_TIME
+      " <time>: Flow expiration time (in us)\n"
+      "\t [--" CMD_OPT_CRC_UNIQUE_FLOWS
+      "]: Flows are CRC unique (default=%s)\n"
+      "\t [--" CMD_OPT_CRC_BITS " <bits>]: CRC bits (default=%" PRIu32 ")\n",
+      argv[0], DEFAULT_PKT_SIZE, DEFAULT_CRC_UNIQUE_FLOWS ? "true" : "false",
+      DEFAULT_CRC_BITS);
 }
 
-static uintmax_t parse_int(const char *str, const char *name) {
+static uintmax_t parse_int(const char *str, const char *name, int base) {
   char *temp;
-  intmax_t result = strtoimax(str, &temp, 10);
+  intmax_t result = strtoimax(str, &temp, base);
 
   // There's also a weird failure case with overflows, but let's not care
   if (temp == str || *temp != '\0') {
@@ -79,17 +97,23 @@ static uintmax_t parse_int(const char *str, const char *name) {
 
 void config_init(int argc, char **argv) {
   // Default configuration values
-  config.flows = 0;
+  config.num_flows = 0;
+  config.crc_unique_flows = DEFAULT_CRC_UNIQUE_FLOWS;
+  config.crc_bits = DEFAULT_CRC_BITS;
   config.exp_time = 0;
+  config.pkt_size = DEFAULT_PKT_SIZE;
   config.rx.port = 0;
-  config.rx.cores = 0;
+  config.rx.num_cores = 0;
   config.tx.port = 0;
-  config.tx.cores = 0;
+  config.tx.num_cores = 0;
 
   // Setup runtime configuration
   config.runtime.running = false;
   config.runtime.update_cnt = 0;
-  config.runtime.rate = 0;
+  config.runtime.churn = 0;
+  config.runtime.rate_per_core = 0;
+  config.runtime.flow_ttl = 0;
+  config.runtime.flow_ttl_offset = 0;
 
   unsigned nb_devices = rte_eth_dev_count_avail();
   unsigned nb_cores = rte_lcore_count();
@@ -101,6 +125,13 @@ void config_init(int argc, char **argv) {
              nb_devices);
   }
 
+  if (nb_cores < 2) {
+    rte_exit(EXIT_FAILURE,
+             "Insufficient number of cores (%" PRIu16
+             " given, but we require at least 2).\n",
+             nb_cores);
+  }
+
   int opt;
   while ((opt = getopt_long(argc, argv, short_options, long_options, NULL)) !=
          EOF) {
@@ -110,78 +141,127 @@ void config_init(int argc, char **argv) {
         exit(0);
       } break;
       case CMD_OPT_TOTAL_FLOWS_NUM: {
-        config.flows = parse_int(optarg, CMD_OPT_TOTAL_FLOWS);
-        PARSER_ASSERT(config.flows > 0,
-                      "Number of flows must be positive (requested %" PRIu64
-                      ").\n",
-                      config.flows);
+        config.num_flows = parse_int(optarg, CMD_OPT_TOTAL_FLOWS, 10);
+
+        uint16_t flow_mask = config.num_flows - 1;
+        PARSER_ASSERT(config.num_flows >= MIN_FLOWS_NUM &&
+                          (config.num_flows & flow_mask) == 0,
+                      "Number of flows must be >= %" PRIu32
+                      " and a power of 2 (requested "
+                      "%" PRIu16 ").\n",
+                      MIN_FLOWS_NUM, config.num_flows);
+      } break;
+      case CMD_OPT_CRC_UNIQUE_FLOWS_NUM: {
+        config.crc_unique_flows = true;
+      } break;
+      case CMD_OPT_CRC_BITS_NUM: {
+        config.crc_bits = parse_int(optarg, CMD_OPT_TOTAL_FLOWS, 10);
+        PARSER_ASSERT(
+            config.crc_bits >= MIN_CRC_BITS && config.crc_bits <= MAX_CRC_BITS,
+            "CRC bits must be in the interval [%" PRIu32 "-%" PRIu32
+            "] (requested %" PRIu32 ").\n",
+            MIN_CRC_BITS, MAX_CRC_BITS, config.crc_bits);
+      } break;
+      case CMD_OPT_EXP_TIME_NUM: {
+        time_us_t exp_time = parse_int(optarg, CMD_OPT_EXP_TIME, 10);
+        config.exp_time = 1000 * exp_time;
+      } break;
+      case CMD_OPT_PKT_SIZE_NUM: {
+        config.pkt_size = parse_int(optarg, CMD_OPT_PKT_SIZE, 10);
+        PARSER_ASSERT(
+            config.pkt_size >= MIN_PKT_SIZE && config.pkt_size <= MAX_PKT_SIZE,
+            "Packet size must be in the interval [%" PRIu64 "-%" PRIu64
+            "] (requested %" PRIu64 ").\n",
+            MIN_PKT_SIZE, MAX_PKT_SIZE, config.pkt_size);
       } break;
       case CMD_OPT_TX_PORT_NUM: {
-        config.tx.port = parse_int(optarg, CMD_OPT_TX_PORT);
+        config.tx.port = parse_int(optarg, CMD_OPT_TX_PORT, 10);
         PARSER_ASSERT(config.tx.port < nb_devices,
                       "Invalid TX device: requested %" PRIu16
                       " but only %" PRIu16 " available.\n",
                       config.tx.port, nb_devices);
       } break;
       case CMD_OPT_RX_PORT_NUM: {
-        config.rx.port = parse_int(optarg, CMD_OPT_RX_PORT);
+        config.rx.port = parse_int(optarg, CMD_OPT_RX_PORT, 10);
         PARSER_ASSERT(config.rx.port < nb_devices,
                       "Invalid RX device: requested %" PRIu16
                       " but only %" PRIu16 " available.\n",
                       config.rx.port, nb_devices);
       } break;
       case CMD_OPT_NUM_TX_CORES_NUM: {
-        config.tx.cores = parse_int(optarg, CMD_OPT_NUM_TX_CORES);
-        PARSER_ASSERT(config.tx.cores > 0,
+        config.tx.num_cores = parse_int(optarg, CMD_OPT_NUM_TX_CORES, 10);
+        PARSER_ASSERT(config.tx.num_cores > 0,
                       "Number of TX cores must be positive (requested %" PRIu16
                       ").\n",
-                      config.tx.cores);
+                      config.tx.num_cores);
       } break;
       case CMD_OPT_NUM_RX_CORES_NUM: {
-        config.rx.cores = parse_int(optarg, CMD_OPT_NUM_TX_CORES);
-        PARSER_ASSERT(config.rx.cores > 0,
+        config.rx.num_cores = parse_int(optarg, CMD_OPT_NUM_TX_CORES, 10);
+        PARSER_ASSERT(config.rx.num_cores > 0,
                       "Number of RX cores must be positive (requested %" PRIu16
                       ").\n",
-                      config.rx.cores);
-      } break;
-      case CMD_OPT_EXP_TIME_NUM: {
-        time_us_t exp_time = parse_int(optarg, CMD_OPT_EXP_TIME);
-        config.exp_time = 1000 * exp_time;
+                      config.rx.num_cores);
       } break;
       default:
         rte_exit(EXIT_FAILURE, "Unknown option %c\n", opt);
     }
   }
 
-  PARSER_ASSERT(config.tx.cores + config.rx.cores <= nb_cores,
+  PARSER_ASSERT(
+      !config.crc_unique_flows || (config.num_flows <= (1 << config.crc_bits)),
+      "Not enough CRC bits for the requested number of flows (flows=%" PRIu16
+      ", crc bits=%" PRIu16 ", max flows=%" PRIu16 ").\n",
+      config.num_flows, config.crc_bits, 1 << config.crc_bits);
+
+  PARSER_ASSERT(config.tx.num_cores + config.rx.num_cores <= nb_cores,
                 "Invalid number of cores (tx=%" PRIu16 ", rx=%" PRIu16
                 ", available=%" PRIu16 ").\n",
-                config.tx.cores, config.rx.cores, nb_cores);
+                config.tx.num_cores, config.rx.num_cores, nb_cores);
 
-  config.min_positive_churn = (60.0 * config.flows);
-  config.max_churn = ((double)(60.0 * config.flows)) /
+  config.max_churn = ((double)(60.0 * config.num_flows)) /
                      NS_TO_S(MIN_CHURN_ACTION_TIME_MULTIPLER * config.exp_time);
 
-  PARSER_ASSERT(config.min_positive_churn < config.max_churn,
-                "Invalid combination of expiration time and number of flows: "
-                "min churn = %" PRIu64 " fpm, max churn = %" PRIu64 " fpm.\n",
-                config.min_positive_churn, config.max_churn);
+  unsigned idx = 0;
+  unsigned lcore_id;
+  RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+    if (idx < config.rx.num_cores) {
+      config.rx.cores[idx] = lcore_id;
+    } else {
+      config.tx.cores[idx - config.rx.num_cores] = lcore_id;
+    }
+    idx++;
+  }
 
   // Reset getopt
   optind = 1;
 }
 
-void config_print(void) {
+void config_print() {
   printf("\n----- Config -----\n");
 
-  printf("TX port:         %" PRIu16 "\n", config.tx.port);
-  printf("RX port:         %" PRIu16 "\n", config.rx.port);
-  printf("TX cores:        %" PRIu16 "\n", config.tx.cores);
-  printf("RX cores:        %" PRIu16 "\n", config.rx.cores);
-  printf("Flows:           %" PRIu64 "\n", config.flows);
-  printf("Expiration time: %" PRIu64 " us\n", config.exp_time / 1000);
-  printf("Min churn:       %" PRIu64 " fpm\n", config.min_positive_churn);
-  printf("Max churn:       %" PRIu64 " fpm\n", config.max_churn);
+  printf("RX port:          %" PRIu16 "\n", config.rx.port);
+  printf("TX port:          %" PRIu16 "\n", config.tx.port);
+
+  printf("RX cores:         %" PRIu16 " (", config.rx.num_cores);
+  for (unsigned i = 0; i < config.rx.num_cores; i++) {
+    if (i != 0) printf(",");
+    printf("%" PRIu16, config.rx.cores[i]);
+  }
+  printf(")\n");
+
+  printf("TX cores:         %" PRIu16 " (", config.tx.num_cores);
+  for (unsigned i = 0; i < config.tx.num_cores; i++) {
+    if (i != 0) printf(",");
+    printf("%" PRIu16, config.tx.cores[i]);
+  }
+  printf(")\n");
+
+  printf("Flows:            %" PRIu16 "\n", config.num_flows);
+  printf("Flows CRC unique: %s\n", config.crc_unique_flows ? "true" : "false");
+  printf("CRC bits:         %" PRIx32 "\n", config.crc_bits);
+  printf("Expiration time:  %" PRIu64 " us\n", config.exp_time / 1000);
+  printf("Packet size       %" PRIu64 " bytes\n", config.pkt_size);
+  printf("Max churn:        %" PRIu64 " fpm\n", config.max_churn);
 
   printf("------------------\n");
 }

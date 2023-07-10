@@ -47,8 +47,10 @@ cmdline_parse_token_string_t pktgen_stats_token_cmd =
 /* Commands taking just an int */
 cmdline_parse_token_string_t pktgen_rate_token_cmd =
     TOKEN_STRING_INITIALIZER(struct pktgen_int_params, cmd, "rate");
+cmdline_parse_token_string_t pktgen_churn_token_cmd =
+    TOKEN_STRING_INITIALIZER(struct pktgen_int_params, cmd, "churn");
 cmdline_parse_token_num_t pktgen_int_token_param =
-    TOKEN_NUM_INITIALIZER(struct pktgen_int_params, param, RTE_UINT32);
+    TOKEN_NUM_INITIALIZER(struct pktgen_int_params, param, UINT32);
 
 static inline void signal_new_config() {
   rte_smp_mb();
@@ -85,7 +87,21 @@ static void pktgen_rate_callback(__rte_unused void *ptr_params,
                                  __rte_unused struct cmdline *ctx,
                                  __rte_unused void *ptr_data) {
   struct pktgen_int_params *params = ptr_params;
-  config.runtime.rate = (double)params->param / 1000.0;
+  config.rate = (double)params->param / 1000.0;
+  config.runtime.rate_per_core = config.rate / config.tx.num_cores;
+
+  signal_new_config();
+}
+
+static void pktgen_churn_callback(__rte_unused void *ptr_params,
+                                  __rte_unused struct cmdline *ctx,
+                                  __rte_unused void *ptr_data) {
+  struct pktgen_int_params *params = ptr_params;
+  uint16_t num_base_flows = config.num_flows / 2;
+  config.runtime.churn = (double)params->param / 60;
+  config.runtime.flow_ttl =
+      (1e9 * (uint64_t)num_base_flows) / config.runtime.churn;
+  config.runtime.flow_ttl_offset = config.runtime.flow_ttl / num_base_flows;
 
   signal_new_config();
 }
@@ -131,10 +147,23 @@ pktgen_rate = {
                NULL},
 };
 
+CMDLINE_PARSE_INT_NTOKENS(2)
+pktgen_churn = {
+    .f = pktgen_churn_callback,
+    .data = NULL,
+    .help_str = "churn <churn>\n     Set churn in fpm",
+    .tokens = {(void *)&pktgen_churn_token_cmd, (void *)&pktgen_int_token_param,
+               NULL},
+};
+
 cmdline_parse_ctx_t list_prompt_commands[] = {
-    (cmdline_parse_inst_t *)&pktgen_quit, (cmdline_parse_inst_t *)&pktgen_start,
-    (cmdline_parse_inst_t *)&pktgen_stop, (cmdline_parse_inst_t *)&pktgen_stats,
-    (cmdline_parse_inst_t *)&pktgen_rate, NULL,
+    (cmdline_parse_inst_t *)&pktgen_quit,
+    (cmdline_parse_inst_t *)&pktgen_start,
+    (cmdline_parse_inst_t *)&pktgen_stop,
+    (cmdline_parse_inst_t *)&pktgen_stats,
+    (cmdline_parse_inst_t *)&pktgen_rate,
+    (cmdline_parse_inst_t *)&pktgen_churn,
+    NULL,
 };
 
 void pktgen_cmdline() {

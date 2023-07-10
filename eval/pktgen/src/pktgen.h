@@ -5,8 +5,18 @@
 extern "C" {
 #endif
 
+#include <rte_ether.h>
+#include <rte_ip.h>
+#include <rte_lcore.h>
+#include <rte_udp.h>
 #include <stdbool.h>
 #include <stdint.h>
+
+#define BURST_SIZE 32
+#define MBUF_CACHE_SIZE 512
+#define MIN_NUM_MBUFS 8192
+#define DESC_RING_SIZE 1024
+#define NUM_SAMPLE_PACKETS (2 * DESC_RING_SIZE)
 
 #define MIN_FLOWS_NUM 2
 
@@ -18,53 +28,85 @@ extern "C" {
 // MIN_CHURN_ACTION_TIME_MULTIPLER time elapsed from the last swap.
 #define MIN_CHURN_ACTION_TIME_MULTIPLER 3
 
-// Maximum time (in seconds) to perform a flow swap, counting from the last
-// performed swap.
-#define MAX_CHURN_ACTION_TIME 1
+typedef uint64_t bits_t;
+typedef uint64_t bytes_t;
 
-typedef uint64_t byte_t;
+#define MIN_PKT_SIZE ((bytes_t)64)
+#define MAX_PKT_SIZE ((bytes_t)1514)  // No CRC
+
+#define MIN_CRC_BITS 1
+#define MAX_CRC_BITS 32
+
+typedef uint8_t bit_t;
+typedef uint8_t byte_t;
 
 typedef uint64_t time_us_t;
 typedef uint64_t time_ns_t;
 
+typedef uint64_t ticks_t;
+
 #define NS_TO_S(T) (((double)(T)) / 1e9)
 
-typedef uint64_t churn_fpm_t;
+typedef uint32_t crc32_t;
 
-typedef uint64_t rate_gbps_t;
+struct flow_t {
+  rte_be32_t src_ip;
+  rte_be32_t dst_ip;
+  rte_be16_t src_port;
+  rte_be16_t dst_port;
+};
+
+typedef uint64_t churn_fpm_t;
+typedef uint64_t churn_fps_t;
+
+typedef double rate_gbps_t;
+
+struct runtime_config_t {
+  bool running;
+  uint64_t update_cnt;
+  churn_fps_t churn;
+
+  // Information for each TX worker
+  rate_gbps_t rate_per_core;
+  time_ns_t flow_ttl;
+  time_ns_t flow_ttl_offset;
+};
 
 struct config_t {
-  uint64_t flows;
+  uint16_t num_flows;
+  bool crc_unique_flows;
+  uint32_t crc_bits;
   time_ns_t exp_time;
+  bytes_t pkt_size;
 
-  churn_fpm_t min_positive_churn; // non-zero
   churn_fpm_t max_churn;
+  rate_gbps_t rate;
 
   struct {
     uint16_t port;
-    uint16_t cores;
+    uint16_t num_cores;
+    uint16_t cores[RTE_MAX_LCORE];
   } tx;
 
   struct {
     uint16_t port;
-    uint16_t cores;
+    uint16_t num_cores;
+    uint16_t cores[RTE_MAX_LCORE];
   } rx;
 
-  struct {
-    bool running;
-    uint64_t update_cnt;
-    rate_gbps_t rate;
-  } runtime;
+  struct runtime_config_t runtime;
 };
 
 extern struct config_t config;
 
 void config_init(int argc, char **argv);
-void config_print(void);
+void config_print();
 void config_print_usage(char **argv);
 
 void pktgen_cmdline();
 void pktgen_stats_display();
+
+crc32_t calculate_crc32(byte_t* data, int len);
 
 #ifdef __cplusplus
 }
