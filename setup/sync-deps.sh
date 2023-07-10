@@ -32,5 +32,4 @@ sync dpdk synapse
 sync klee main
 sync klee-uclibc synapse
 sync llvm synapse
-sync maestro main
 sync z3 synapse
