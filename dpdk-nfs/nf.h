@@ -5,13 +5,14 @@
 
 #include "lib/verified/vigor-time.h"
 
-#define FLOOD_FRAME ((uint16_t) -1)
+#define FLOOD_FRAME ((uint16_t)-1)
 
 struct nf_config;
 struct rte_mbuf;
 
 bool nf_init(void);
-int nf_process(uint16_t device, uint8_t** buffer, uint16_t packet_length, vigor_time_t now, struct rte_mbuf *mbuf);
+int nf_process(uint16_t device, uint8_t **buffer, uint16_t packet_length,
+               vigor_time_t now, struct rte_mbuf *mbuf);
 
 extern struct nf_config config;
 void nf_config_init(int argc, char **argv);

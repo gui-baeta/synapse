@@ -18,4 +18,4 @@ void vector_set_entry_condition(struct Vector *vector,
 
 void vector_reset(struct Vector *vector);
 
-#endif // _VECTOR_STUB_CONTROL_H_INCLUDED_
+#endif  // _VECTOR_STUB_CONTROL_H_INCLUDED_

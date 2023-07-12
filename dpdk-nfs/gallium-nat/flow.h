@@ -18,13 +18,13 @@ unsigned flow_hash(void *obj);
 bool flow_eq(void *a, void *b);
 void flow_allocate(void *obj);
 
-#define LOG_FLOW(obj, p)                                                       \
-  p("{");                                                                      \
-  p("src_addr: %d", (obj)->src_addr);                                          \
-  p("dst_addr: %d", (obj)->dst_addr);                                          \
-  p("src_port: %d", (obj)->src_port);                                          \
-  p("dst_port: %d", (obj)->dst_port);                                          \
-  p("protocol: %d", (obj)->protocol);                                          \
+#define LOG_FLOW(obj, p)              \
+  p("{");                             \
+  p("src_addr: %d", (obj)->src_addr); \
+  p("dst_addr: %d", (obj)->dst_addr); \
+  p("src_port: %d", (obj)->src_port); \
+  p("dst_port: %d", (obj)->dst_port); \
+  p("protocol: %d", (obj)->protocol); \
   p("}");
 
 #ifdef KLEE_VERIFICATION
@@ -33,6 +33,6 @@ void flow_allocate(void *obj);
 
 extern struct str_field_descr flow_descrs[5];
 extern struct nested_field_descr flow_nests[0];
-#endif // KLEE_VERIFICATION
+#endif  // KLEE_VERIFICATION
 
 #endif

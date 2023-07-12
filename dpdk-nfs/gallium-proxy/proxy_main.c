@@ -22,7 +22,7 @@ bool nf_init() {
 
 int match_backend(uint16_t dst_port, uint32_t *new_dst_ip,
                   uint16_t *new_dst_port) {
-  struct Entry entry = { .port = dst_port };
+  struct Entry entry = {.port = dst_port};
   int index;
   int present = map_get(state->table, &entry, &index);
 

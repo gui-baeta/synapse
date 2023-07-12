@@ -50,7 +50,7 @@ __attribute__((noinline)) int dchain_allocate_new_index(
   // dereference.
   klee_trace_param_u64((uint64_t)chain, "chain");
   klee_trace_param_ptr(index_out, sizeof(int), "index_out");
-  klee_trace_param_i32(time, "time");
+  klee_trace_param_u64(time, "time");
 
   ALLOW(chain);
   if (chain->out_of_space) {
@@ -73,7 +73,7 @@ __attribute__((noinline)) int dchain_rejuvenate_index(struct DoubleChain *chain,
   // dereference.
   klee_trace_param_u64((uint64_t)chain, "chain");
   klee_trace_param_i32(index, "index");
-  klee_trace_param_i32(time, "time");
+  klee_trace_param_u64(time, "time");
 
   klee_assert(chain != NULL);
   // TODO: Check if it is legible for rejuivenation?
@@ -88,7 +88,7 @@ __attribute__((noinline)) int dchain_expire_one_index(struct DoubleChain *chain,
   // dereference.
   klee_trace_param_u64((uint64_t)chain, "chain");
   klee_trace_param_ptr(index_out, sizeof(int), "index_out");
-  klee_trace_param_i32(time, "time");
+  klee_trace_param_u64(time, "time");
 
   klee_assert(chain != NULL);
   klee_assert(0 && "not supported in this model");

@@ -22,4 +22,4 @@ vigor_time_t current_time(void);
 // current_time was invoked at least once.
 vigor_time_t recent_time(void);
 
-#endif // NF_TIME_H_INCLUDED
+#endif  // NF_TIME_H_INCLUDED

@@ -20,7 +20,7 @@
 #include "lib/models/hardware.h"
 #include "lib/models/verified/vigor-time-control.h"
 #include <klee/klee.h>
-#endif // KLEE_VERIFICATION
+#endif  // KLEE_VERIFICATION
 
 // Unverified support for batching, useful for performance comparisons
 #ifndef VIGOR_BATCH_SIZE
@@ -29,36 +29,36 @@
 
 // More elaborate loop shape with annotations for verification
 #ifdef KLEE_VERIFICATION
-#define VIGOR_LOOP_BEGIN                                                       \
-  unsigned _vigor_lcore_id = 0; /* no multicore support for now */             \
-  vigor_time_t _vigor_start_time = start_time();                               \
-  int _vigor_loop_termination = klee_int("loop_termination");                  \
-  unsigned VIGOR_DEVICES_COUNT = rte_eth_dev_count_avail();                    \
-  while (klee_induce_invariants() & _vigor_loop_termination) {                 \
-    nf_loop_iteration_border(_vigor_lcore_id, _vigor_start_time);              \
-    vigor_time_t VIGOR_NOW = current_time();                                   \
-    /* concretize the device to avoid leaking symbols into DPDK */             \
-    uint16_t VIGOR_DEVICE =                                                    \
-        klee_range(0, VIGOR_DEVICES_COUNT, "VIGOR_DEVICE");                    \
-    uint16_t CONCRETE_VIGOR_DEVICE = VIGOR_DEVICE;                             \
-    concretize_devices(&CONCRETE_VIGOR_DEVICE, VIGOR_DEVICES_COUNT);           \
+#define VIGOR_LOOP_BEGIN                                             \
+  unsigned _vigor_lcore_id = 0; /* no multicore support for now */   \
+  vigor_time_t _vigor_start_time = start_time();                     \
+  int _vigor_loop_termination = klee_int("loop_termination");        \
+  unsigned VIGOR_DEVICES_COUNT = rte_eth_dev_count_avail();          \
+  while (klee_induce_invariants() & _vigor_loop_termination) {       \
+    nf_loop_iteration_border(_vigor_lcore_id, _vigor_start_time);    \
+    vigor_time_t VIGOR_NOW = current_time();                         \
+    /* concretize the device to avoid leaking symbols into DPDK */   \
+    uint16_t VIGOR_DEVICE =                                          \
+        klee_range(0, VIGOR_DEVICES_COUNT, "VIGOR_DEVICE");          \
+    uint16_t CONCRETE_VIGOR_DEVICE = VIGOR_DEVICE;                   \
+    concretize_devices(&CONCRETE_VIGOR_DEVICE, VIGOR_DEVICES_COUNT); \
     stub_hardware_receive_packet(VIGOR_DEVICE);
-#define VIGOR_LOOP_END                                                         \
-  stub_hardware_reset_receive(VIGOR_DEVICE);                                   \
-  nf_loop_iteration_border(_vigor_lcore_id, VIGOR_NOW);                        \
+#define VIGOR_LOOP_END                                  \
+  stub_hardware_reset_receive(VIGOR_DEVICE);            \
+  nf_loop_iteration_border(_vigor_lcore_id, VIGOR_NOW); \
   }
-#else // KLEE_VERIFICATION
-#define VIGOR_LOOP_BEGIN                                                       \
-  while (1) {                                                                  \
-    vigor_time_t VIGOR_NOW = current_time();                                   \
-    unsigned VIGOR_DEVICES_COUNT = rte_eth_dev_count_avail();                  \
-    for (uint16_t VIGOR_DEVICE = 0; VIGOR_DEVICE < VIGOR_DEVICES_COUNT;        \
-         VIGOR_DEVICE++) {                                                     \
+#else  // KLEE_VERIFICATION
+#define VIGOR_LOOP_BEGIN                                                \
+  while (1) {                                                           \
+    vigor_time_t VIGOR_NOW = current_time();                            \
+    unsigned VIGOR_DEVICES_COUNT = rte_eth_dev_count_avail();           \
+    for (uint16_t VIGOR_DEVICE = 0; VIGOR_DEVICE < VIGOR_DEVICES_COUNT; \
+         VIGOR_DEVICE++) {                                              \
       unsigned CONCRETE_VIGOR_DEVICE = VIGOR_DEVICE;
-#define VIGOR_LOOP_END                                                         \
-  }                                                                            \
+#define VIGOR_LOOP_END \
+  }                    \
   }
-#endif // KLEE_VERIFICATION
+#endif  // KLEE_VERIFICATION
 
 #if VIGOR_BATCH_SIZE == 1
 // Queue sizes for receiving/transmitting packets
@@ -99,7 +99,7 @@ static int nf_init_device(uint16_t device, struct rte_mempool *mbuf_pool) {
   int retval;
 
   // device_conf passed to rte_eth_dev_configure cannot be NULL
-  struct rte_eth_conf device_conf = { 0 };
+  struct rte_eth_conf device_conf = {0};
   // device_conf.rxmode.hw_strip_crc = 1;
 
   // Configure the device (1, 1 == number of RX/TX queues)
@@ -165,10 +165,11 @@ static void worker_main(void) {
       concretize_devices(&dst_device, rte_eth_dev_count_avail());
       if (rte_eth_tx_burst(dst_device, 0, &mbuf, 1) != 1) {
 #ifdef VIGOR_ALLOW_DROPS
-        rte_pktmbuf_free(mbuf); // OK, we're debugging
+        rte_pktmbuf_free(mbuf);  // OK, we're debugging
 #else
-        printf("We assume the hardware will allways accept a packet to "
-               "transmit.\n");
+        printf(
+            "We assume the hardware will allways accept a packet to "
+            "transmit.\n");
         abort();
 #endif
       }
@@ -176,11 +177,12 @@ static void worker_main(void) {
   }
   VIGOR_LOOP_END
 
-#else // if VIGOR_BATCH_SIZE != 1
+#else  // if VIGOR_BATCH_SIZE != 1
 
   if (rte_eth_dev_count_avail() != 2) {
-    printf("We assume there will be exactly 2 devices for our simple batching "
-           "implementation.");
+    printf(
+        "We assume there will be exactly 2 devices for our simple batching "
+        "implementation.");
     exit(1);
   }
   NF_INFO("Running with batches, this code is unverified!");
@@ -205,9 +207,10 @@ static void worker_main(void) {
 
         if (dst_device == VIGOR_DEVICE) {
           rte_pktmbuf_free(mbufs[n]);
-        } else { // includes flood when 2 devices, which is equivalent to just
-                 // a
-                 // send
+        } else {  // includes flood when 2 devices, which is equivalent
+                  // to just
+                  // a
+                  // send
           mbufs_to_send[tx_count] = mbufs[n];
           tx_count++;
         }
@@ -216,8 +219,8 @@ static void worker_main(void) {
       uint16_t sent_count =
           rte_eth_tx_burst(1 - VIGOR_DEVICE, 0, mbufs_to_send, tx_count);
       for (uint16_t n = sent_count; n < tx_count; n++) {
-        rte_pktmbuf_free(mbufs[n]); // should not happen, but we're in the
-                                    // unverified case anyway
+        rte_pktmbuf_free(mbufs[n]);  // should not happen, but we're in
+                                     // the unverified case anyway
       }
     }
   }
@@ -241,12 +244,12 @@ int main(int argc, char **argv) {
   // Create a memory pool
   unsigned nb_devices = rte_eth_dev_count_avail();
   struct rte_mempool *mbuf_pool = rte_pktmbuf_pool_create(
-      "MEMPOOL",                         // name
-      MEMPOOL_BUFFER_COUNT * nb_devices, // #elements
-      0, // cache size (per-core, not useful in a single-threaded app)
-      0, // application private area size
-      RTE_MBUF_DEFAULT_BUF_SIZE, // data buffer size
-      rte_socket_id()            // socket ID
+      "MEMPOOL",                          // name
+      MEMPOOL_BUFFER_COUNT * nb_devices,  // #elements
+      0,  // cache size (per-core, not useful in a single-threaded app)
+      0,  // application private area size
+      RTE_MBUF_DEFAULT_BUF_SIZE,  // data buffer size
+      rte_socket_id()             // socket ID
   );
   if (mbuf_pool == NULL) {
     rte_exit(EXIT_FAILURE, "Cannot create pool: %s\n", rte_strerror(rte_errno));

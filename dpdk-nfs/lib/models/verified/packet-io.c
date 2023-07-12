@@ -153,7 +153,7 @@ bool packet_receive(uint16_t src_device, void **p, uint32_t *len) {
     global_total_n_borrowed_chunks = 0;
     global_tot_len_borrowed = 0;
     global_sent = false;
-    global_packet_len = *len; // klee_int("packet_len");
+    global_packet_len = *len;  // klee_int("packet_len");
     for (uint32_t i = 0; i < PREALLOC_CHUNKS; ++i) {
       global_chunk_layouts[i].set = false;
     }

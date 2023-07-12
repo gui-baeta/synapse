@@ -59,11 +59,11 @@ int nf_process(uint16_t device, uint8_t **buffer, uint16_t packet_length,
   } else {
     NF_DEBUG("LAN packet");
 
-    struct Flow flow = { .src_port = tcpudp_header->src_port,
-                         .dst_port = tcpudp_header->dst_port,
-                         .src_addr = ipv4_header->src_addr,
-                         .dst_addr = ipv4_header->dst_addr,
-                         .protocol = ipv4_header->next_proto_id };
+    struct Flow flow = {.src_port = tcpudp_header->src_port,
+                        .dst_port = tcpudp_header->dst_port,
+                        .src_addr = ipv4_header->src_addr,
+                        .dst_addr = ipv4_header->dst_addr,
+                        .protocol = ipv4_header->next_proto_id};
 
     uint16_t external_port;
 

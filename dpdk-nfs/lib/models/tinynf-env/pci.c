@@ -23,7 +23,7 @@ uint32_t tn_pci_read(struct tn_pci_address address, uint8_t reg) {
     return ((uintptr_t)DEVICES[address.function].mem >> 32) & 0xFFFFFFFF;
   }
   // unknown
-  return (uint32_t) - 1;
+  return (uint32_t)-1;
 }
 
 void tn_pci_write(struct tn_pci_address address, uint8_t reg, uint32_t value) {

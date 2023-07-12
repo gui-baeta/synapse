@@ -11,4 +11,4 @@
 int expire_items_single_map_iteratively(struct Vector *vector, struct Map *map,
                                         int start, int n_elems);
 
-#endif //_UNVERIFIED_EXPIRATOR_H_INCLUDED_
+#endif  //_UNVERIFIED_EXPIRATOR_H_INCLUDED_

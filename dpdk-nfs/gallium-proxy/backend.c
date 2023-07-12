@@ -15,8 +15,8 @@ void backend_allocate(void *obj) {
 
 #ifdef KLEE_VERIFICATION
 struct str_field_descr backend_descrs[] = {
-  { offsetof(struct Backend, ip), sizeof(uint32_t), 0, "src_ip" },
-  { offsetof(struct Backend, port), sizeof(uint16_t), 0, "src_port" },
+    {offsetof(struct Backend, ip), sizeof(uint32_t), 0, "src_ip"},
+    {offsetof(struct Backend, port), sizeof(uint16_t), 0, "src_port"},
 };
 
 struct nested_field_descr backend_nests[] = {};
@@ -39,7 +39,7 @@ unsigned backend_hash(void *obj) {
   return klee_int("Backend_hash");
 }
 
-#else // KLEE_VERIFICATION
+#else  // KLEE_VERIFICATION
 
 unsigned backend_hash(void *obj) {
   struct Backend *id = (struct Backend *)obj;
@@ -50,4 +50,4 @@ unsigned backend_hash(void *obj) {
   return hash;
 }
 
-#endif // KLEE_VERIFICATION
+#endif  // KLEE_VERIFICATION

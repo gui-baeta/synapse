@@ -18,9 +18,9 @@
 #include <klee/klee.h>
 
 struct rte_eth_rss_conf {
-  uint8_t   *rss_key;
-  uint8_t   rss_key_len;
-  uint64_t  rss_hf;
+  uint8_t *rss_key;
+  uint8_t rss_key_len;
+  uint64_t rss_hf;
 };
 
 struct rte_eth_link {
@@ -42,21 +42,21 @@ struct rte_eth_txmode {
 /**
  *  Simple flags are used for rte_eth_conf.rxmode.mq_mode.
  */
-#define ETH_MQ_RX_RSS_FLAG  0x1
+#define ETH_MQ_RX_RSS_FLAG 0x1
 
 enum rte_eth_rx_mq_mode {
-	/** None of DCB,RSS or VMDQ mode */
-	ETH_MQ_RX_NONE = 0,
+  /** None of DCB,RSS or VMDQ mode */
+  ETH_MQ_RX_NONE = 0,
 
-	/** For RX side, only RSS is on */
-	ETH_MQ_RX_RSS = ETH_MQ_RX_RSS_FLAG
+  /** For RX side, only RSS is on */
+  ETH_MQ_RX_RSS = ETH_MQ_RX_RSS_FLAG
 };
 
 struct rte_eth_conf {
   struct {
     uint8_t hw_strip_crc;
     enum rte_eth_rx_mq_mode mq_mode;
-    
+
     struct {
       struct rte_eth_rss_conf rss_conf;
     } rx_adv_conf;
@@ -95,14 +95,16 @@ int devices_promiscuous[STUB_DEVICES_COUNT];
 // To allocate mbufs
 struct rte_mempool *devices_rx_mempool[STUB_DEVICES_COUNT];
 
-static inline uint16_t rte_eth_dev_count_avail(void) { return STUB_DEVICES_COUNT; }
+static inline uint16_t rte_eth_dev_count_avail(void) {
+  return STUB_DEVICES_COUNT;
+}
 
 static inline int rte_eth_dev_configure(uint16_t port_id, uint16_t nb_rx_queue,
                                         uint16_t nb_tx_queue,
                                         const struct rte_eth_conf *eth_conf) {
   klee_assert(!devices_configured[port_id]);
-  klee_assert(nb_rx_queue == 1); // we only support that
-  klee_assert(nb_tx_queue == 1); // same
+  klee_assert(nb_rx_queue == 1);  // we only support that
+  klee_assert(nb_tx_queue == 1);  // same
   // TODO somehow semantically check eth_conf?
 
   devices_configured[port_id] = true;
@@ -116,9 +118,9 @@ static inline int rte_eth_tx_queue_setup(uint16_t port_id, uint16_t tx_queue_id,
                                          const struct rte_eth_txconf *tx_conf) {
   klee_assert(devices_configured[port_id]);
   klee_assert(!devices_tx_setup[port_id]);
-  klee_assert(tx_queue_id == 0); // we only support that
-  klee_assert(socket_id == 0);   // same
-  klee_assert(tx_conf == NULL);  // same
+  klee_assert(tx_queue_id == 0);  // we only support that
+  klee_assert(socket_id == 0);    // same
+  klee_assert(tx_conf == NULL);   // same
 
   devices_tx_setup[port_id] = true;
   return 0;
@@ -131,8 +133,8 @@ static inline int rte_eth_rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
                                          struct rte_mempool *mb_pool) {
   klee_assert(devices_tx_setup[port_id]);
   klee_assert(!devices_rx_setup[port_id]);
-  klee_assert(rx_queue_id == 0); // we only support that
-  klee_assert(socket_id == 0);   // same
+  klee_assert(rx_queue_id == 0);  // we only support that
+  klee_assert(socket_id == 0);    // same
   klee_assert(mb_pool != NULL);
   // TODO semantic checks for rx_conf? since we need it for the hardware verif
 
@@ -174,8 +176,8 @@ static inline uint16_t rte_eth_rx_burst(uint16_t port_id, uint16_t queue_id,
                                         struct rte_mbuf **rx_pkts,
                                         uint16_t nb_pkts) {
   klee_assert(devices_started[port_id]);
-  klee_assert(queue_id == 0); // we only support that
-  klee_assert(nb_pkts == 1);  // same
+  klee_assert(queue_id == 0);  // we only support that
+  klee_assert(nb_pkts == 1);   // same
 
   struct rte_mempool *pool = devices_rx_mempool[port_id];
   uint16_t priv_size = rte_pktmbuf_priv_size(pool);
@@ -207,8 +209,7 @@ static inline uint16_t rte_eth_rx_burst(uint16_t port_id, uint16_t queue_id,
     return false;
   }
   klee_make_symbolic(buf_content_symbol, pool->elt_size, "user_buf");
-  memcpy((char *)*rx_pkts + mbuf_size, buf_content_symbol,
-         MBUF_MIN_SIZE);
+  memcpy((char *)*rx_pkts + mbuf_size, buf_content_symbol, MBUF_MIN_SIZE);
   free(buf_content_symbol);
 
   // We do not support chained mbufs for now, make sure the NF doesn't touch
@@ -229,10 +230,10 @@ static inline uint16_t rte_eth_rx_burst(uint16_t port_id, uint16_t queue_id,
   // Keep concrete values for what a driver guarantees
   // (assignments are in the same order as the rte_mbuf declaration)
   (*rx_pkts)->buf_addr = (char *)(*rx_pkts) + mbuf_size;
-  (*rx_pkts)->buf_iova = (rte_iova_t)(*rx_pkts)->buf_addr; // we assume VA = PA
-  // TODO: make data_off symbolic (but then we get symbolic pointer addition...)
-  // Alternative: Somehow prove that the code never touches anything outside of
-  // the [data_off, data_off+data_len] range...
+  (*rx_pkts)->buf_iova = (rte_iova_t)(*rx_pkts)->buf_addr;  // we assume VA = PA
+  // TODO: make data_off symbolic (but then we get symbolic pointer
+  // addition...) Alternative: Somehow prove that the code never touches
+  // anything outside of the [data_off, data_off+data_len] range...
   (*rx_pkts)->data_off = 0;
   (*rx_pkts)->refcnt = 1;
   (*rx_pkts)->nb_segs = 1;
@@ -268,8 +269,8 @@ static inline uint16_t rte_eth_tx_burst(uint16_t port_id, uint16_t queue_id,
                                         struct rte_mbuf **tx_pkts,
                                         uint16_t nb_pkts) {
   klee_assert(devices_started[port_id]);
-  klee_assert(queue_id == 0); // we only support that
-  klee_assert(nb_pkts == 1);  // same
+  klee_assert(queue_id == 0);  // we only support that
+  klee_assert(nb_pkts == 1);   // same
 
   packet_send(tx_pkts[0]->buf_addr, port_id);
 
@@ -281,6 +282,5 @@ static inline uint16_t rte_eth_tx_burst(uint16_t port_id, uint16_t queue_id,
     tx_pkts[0]->next = NULL;
     rte_mbuf_raw_free(tx_pkts[0]);
   }
-  return 1; // Assume the NIC will always accept the packet for a send.
+  return 1;  // Assume the NIC will always accept the packet for a send.
 }
-

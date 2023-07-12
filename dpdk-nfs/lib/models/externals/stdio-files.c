@@ -26,11 +26,7 @@ static const int POS_UNOPENED = -1;
 static const int POS_EOF = -2;
 static char *ANON_MEM_NAME = "anonymous_memory";
 
-enum stub_file_kind {
-  KIND_FILE,
-  KIND_DIRECTORY,
-  KIND_LINK
-};
+enum stub_file_kind { KIND_FILE, KIND_DIRECTORY, KIND_LINK };
 
 struct stub_mmap {
   // >1 -> in use
@@ -49,7 +45,8 @@ struct stub_mmap {
 
 struct stub_file {
   // Folders MUST NOT have a trailing slash
-  // Unix-like multi-slash simplification (e.g. /a//b == /a/b) is NOT supported
+  // Unix-like multi-slash simplification (e.g. /a//b == /a/b) is NOT
+  // supported
   char *path;
 
   // Either: (file or symlink)
@@ -128,8 +125,8 @@ int stat(const char *path, struct stat *buf) {
       if (FILES[n].content == FILE_CONTENT_NOTPRESENT) {
         return -1;
       }
-      // DPDK doesn't seem to need *buf, so let's not set it but ensure it's not
-      // used
+      // DPDK doesn't seem to need *buf, so let's not set it but ensure
+      // it's not used
       klee_forbid_access(buf, sizeof(struct stat), "stat buf");
       return 0;
     }
@@ -234,12 +231,11 @@ int ftruncate(int fd, off_t length) {
   // FILE_CONTENT_HUGEPAGE
   if (FILES[fd].content == FILE_CONTENT_HPINFO ||
       FILES[fd].content == FILE_CONTENT_HUGEPAGE) {
-
     FILES[fd].content = (char *)malloc(length);
     memset(FILES[fd].content, 0, length);
 
-    // On success, zero is returned. On error, -1 is returned, and errno is set
-    // appropriately.
+    // On success, zero is returned. On error, -1 is returned, and errno is
+    // set appropriately.
     // -- https://linux.die.net/man/2/ftruncate
     return 0;
   }
@@ -258,8 +254,8 @@ off_t lseek(int fd, off_t offset, int whence) {
 
     // Upon successful completion, lseek() returns the resulting offset
     // location as measured in bytes from the beginning of the file. On
-    // error, the value (off_t) -1 is returned and errno is set to indicate the
-    // error.
+    // error, the value (off_t) -1 is returned and errno is set to indicate
+    // the error.
     // -- http://man7.org/linux/man-pages/man2/lseek.2.html
     return offset;
   }
@@ -276,13 +272,14 @@ ssize_t read(int fd, void *buf, size_t count) {
 
     // Read fake pagemap data
     // See mmap() for an explanation of the computation
-    // The file's position is the virtual PFN times the size of a PFN (64 bits),
-    // and we want the PFN to be equal to the VPFN since we want VAs and PAs to
-    // match
+    // The file's position is the virtual PFN times the size of a PFN (64
+    // bits), and we want the PFN to be equal to the VPFN since we want VAs
+    // and PAs to match
     int vpfn = FILES[fd].pos / sizeof(uint64_t);
     klee_assert(vpfn < (((uint64_t)1) << 55));  // PFNs are stored on 55 bits
 
-    // TODO I think DPDK forgets to check whether the page is marked as swapped,
+    // TODO I think DPDK forgets to check whether the page is marked as
+    // swapped,
     //      which changes the meaning of bits 0-54...
 
     memset(buf, 0, count);
@@ -342,8 +339,8 @@ int close(int fd) {
   // We do not remove mmapings:
   // "The mmap() function adds an extra reference to the file associated with
   // the file descriptor fildes
-  //  which is not removed by a subsequent close() on that file descriptor. This
-  //  reference is removed when there are no more mappings to the file."
+  //  which is not removed by a subsequent close() on that file descriptor.
+  //  This reference is removed when there are no more mappings to the file."
   // -- http://pubs.opengroup.org/onlinepubs/7908799/xsh/mmap.html
 
   return 0;
@@ -430,7 +427,6 @@ void *mmap(void *addr, size_t length, int prot, int flags, int fd,
 
   // Mapping an existing file
   if (fd != -1) {
-
     klee_assert(FILES[fd].kind == KIND_FILE);
 
     // First off, are we trying to mmap device memory?
@@ -483,21 +479,22 @@ void *mmap(void *addr, size_t length, int prot, int flags, int fd,
     }
   }
   // We need to align the returned value to the page size.
-  // This is because we want "physical" addresses a.k.a. PAs (that we report) to
-  // be the same as virtual addresses a.k.a. VAs; since PA = (PFN * PS) + (VA %
-  // PS)
+  // This is because we want "physical" addresses a.k.a. PAs (that we report)
+  // to be the same as virtual addresses a.k.a. VAs; since PA = (PFN * PS) +
+  // (VA % PS)
   //       where PFN is the Page Frame Number, PS is the Page Size
   //   PA = VA implies PFN = (VA - (VA % PS))/PS, and since PFN must be an
   //   integer, (VA % PS) must be 0, which is only the case if the address is
   //   aligned.
-  // Thus, we allocate an additional page so that we can always align the return
-  // value to a page, since at most the offset we'll have to add to the "real"
-  // VA is the page size itself.
+  // Thus, we allocate an additional page so that we can always align the
+  // return value to a page, since at most the offset we'll have to add to the
+  // "real" VA is the page size itself.
   size_t actual_length = length + PAGE_SIZE;
   void *actual_mem = malloc(actual_length);
   memset(actual_mem, 0, actual_length);
 
-  // note that this will result in an offset of PAGE_SIZE even if it could be 0
+  // note that this will result in an offset of PAGE_SIZE even if it could be
+  // 0
   // - we don't care
   size_t real_offset = PAGE_SIZE - (((intptr_t)actual_mem) % PAGE_SIZE);
   void *mem = (actual_mem + real_offset);
@@ -513,8 +510,8 @@ void *mmap(void *addr, size_t length, int prot, int flags, int fd,
   if ((prot & PROT_NONE) == PROT_NONE) {
     FILES[fd].mmaps[m].accessible = true;
   } else if ((prot & PROT_WRITE) != PROT_WRITE) {
-    // Read-only memory, we enforce even stronger semantics by disallowing reads
-    // with forbid_access
+    // Read-only memory, we enforce even stronger semantics by disallowing
+    // reads with forbid_access
     klee_forbid_access(actual_mem, actual_length, "mmapped read-only memory");
     FILES[fd].mmaps[m].accessible = false;
   } else {
@@ -547,13 +544,13 @@ int munmap(void *addr, size_t length) {
   for (int n = 0; n < sizeof(FILES) / sizeof(FILES[0]); n++) {
     for (int m = 0; m < FILES[n].mmaps_len; m++) {
       if (FILES[n].mmaps[m].mem == addr) {
-
         if (FILES[n].path != ANON_MEM_NAME) {
           klee_assert(FILES[n].mmaps[m].mem_len == length);
         }
 
-        // We never free the mappings or decrease mmaps_len, since we keep old
-        // mappings alive But we do ensure freed mmaps are not accessed
+        // We never free the mappings or decrease mmaps_len, since we
+        // keep old mappings alive But we do ensure freed mmaps are not
+        // accessed
         FILES[n].mmaps[m].refcount--;
         if (FILES[n].mmaps[m].refcount == 0 && FILES[n].mmaps[m].accessible) {
           klee_forbid_access(FILES[n].mmaps[m].actual_mem,
@@ -589,14 +586,14 @@ int __libc_open(const char *pathname, int flags, mode_t mode) {
 
 void stub_stdio_files_init(struct nfos_pci_nic *devs, int n) {
   // Helper methods declarations
-  char *stub_pci_file(const char * device_name, const char * file_name);
-  char *stub_pci_folder(const char * device_name);
+  char *stub_pci_file(const char *device_name, const char *file_name);
+  char *stub_pci_folder(const char *device_name);
   char *stub_pci_addr(size_t addr);
   char *stub_pci_name(int index);
-  int stub_add_file(char * path, char * content);
-  int stub_add_link(char * path, char * content);
-  int stub_add_folder_array(char * path, int children_len, int * children);
-  int stub_add_folder(char * path, int children_len, ...);
+  int stub_add_file(char *path, char *content);
+  int stub_add_link(char *path, char *content);
+  int stub_add_folder_array(char *path, int children_len, int *children);
+  int stub_add_folder(char *path, int children_len, ...);
 
   assert(devs != NULL);
 
@@ -651,19 +648,20 @@ void stub_stdio_files_init(struct nfos_pci_nic *devs, int n) {
     stub_add_file(stub_pci_file(dev, "iommu/intel-iommu/cap"),
                   FILE_CONTENT_NOTPRESENT);
 
-    // 'uio' folder, itself containing an empty folder 'uioN' (where N is the
-    // device number)
+    // 'uio' folder, itself containing an empty folder 'uioN' (where N is
+    // the device number)
     char uio_name[32];
     snprintf(uio_name, sizeof(uio_name), "uio/uio%d", n);
     int uio_entry_fd = stub_add_folder(stub_pci_file(dev, strdup(uio_name)), 0);
     int uio_fd = stub_add_folder(stub_pci_file(dev, "uio"), 1, uio_entry_fd);
 
     // Resources file
-    // Multiple lines; each line has the format <start addr> <end addr> <flags>
-    // all of which are 64-bit numbers in hexadecimal notation (starting with
-    // 0x) Flag 0x200 is "memory", i.e. the addresses designate a DMA location
-    // Flag 0x100 is "I/O", i.e. the addresses designate a I/O port range
-    // DPDK interprets 6 lines max (PCI_MAX_RESOURCE)
+    // Multiple lines; each line has the format <start addr> <end addr>
+    // <flags> all of which are 64-bit numbers in hexadecimal notation
+    // (starting with 0x) Flag 0x200 is "memory", i.e. the addresses
+    // designate a DMA location Flag 0x100 is "I/O", i.e. the addresses
+    // designate a I/O port range DPDK interprets 6 lines max
+    // (PCI_MAX_RESOURCE)
 
     const char *resource_mem_format = "%s %s 0x0000000000000200\n";
     const char *resource_io_format = "%s %s 0x0000000000000100\n";
@@ -681,7 +679,8 @@ void stub_stdio_files_init(struct nfos_pci_nic *devs, int n) {
       if (devs[n].resources[i].start == NULL) {
         // No resource actually present
         strncat(resource_content,
-                "0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+                "0x0000000000000000 0x0000000000000000 "
+                "0x0000000000000000\n",
                 sizeof(resource_content) - 1);
       } else {
         char resource_line_content[180];
@@ -787,8 +786,8 @@ void stub_stdio_files_init(struct nfos_pci_nic *devs, int n) {
                                                                 // what DPDK
                                                                 // cares about
   stub_add_file("/proc/meminfo",
-                "Hugepagesize:       2048 kB\n");  // only hugepages, what DPDK
-                                                   // cares about
+                "Hugepagesize:       2048 kB\n");  // only hugepages, what
+                                                   // DPDK cares about
   stub_add_file("/proc/self/pagemap", FILE_CONTENT_PAGEMAP);
 
   // Hugepages folder (empty)
@@ -802,7 +801,8 @@ void stub_stdio_files_init(struct nfos_pci_nic *devs, int n) {
   // enumerating...
   stub_add_file("/dev/hugepages", "");
 
-  // HACK those files exist but are not bound to their folder (defined above)...
+  // HACK those files exist but are not bound to their folder (defined
+  // above)...
   stub_add_file("/dev/hugepages/rte", FILE_CONTENT_HUGEPAGE);
   for (int n = 0; n < STUB_HUGEPAGES_COUNT; n++) {
     char hugepage_file_name[1024];
@@ -820,9 +820,9 @@ void stub_stdio_files_init(struct nfos_pci_nic *devs, int n) {
 }
 
 #if (defined VIGOR_MODEL_HARDWARE) && !(defined NFOS)
-__attribute__((constructor(150)))  // High prio, must execute after other stuff
-    // since it relies on hardware models
-    void stub_stdio_files_init_constructor(void) {
+__attribute__((constructor(150)))	// High prio, must execute after other stuff
+		// since it relies on hardware models
+		void stub_stdio_files_init_constructor(void) {
   int num_devs;
   struct nfos_pci_nic *devs;
 

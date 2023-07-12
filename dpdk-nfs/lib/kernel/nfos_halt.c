@@ -5,7 +5,6 @@
 #include "nfos_halt.h"
 
 void nfos_halt(void) {
-
 #ifdef KLEE_VERIFICATION
 
   exit(1);  // One does not just calls "halt" if nothing bad happened

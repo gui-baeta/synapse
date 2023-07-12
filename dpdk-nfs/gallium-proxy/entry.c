@@ -14,7 +14,7 @@ void entry_allocate(void *obj) {
 
 #ifdef KLEE_VERIFICATION
 struct str_field_descr entry_descrs[] = {
-  { offsetof(struct Entry, port), sizeof(uint16_t), 0, "port" },
+    {offsetof(struct Entry, port), sizeof(uint16_t), 0, "port"},
 };
 
 struct nested_field_descr entry_nests[] = {};
@@ -37,7 +37,7 @@ unsigned entry_hash(void *obj) {
   return klee_int("Entry_hash");
 }
 
-#else // KLEE_VERIFICATION
+#else  // KLEE_VERIFICATION
 
 unsigned entry_hash(void *obj) {
   struct Entry *id = (struct Entry *)obj;
@@ -47,4 +47,4 @@ unsigned entry_hash(void *obj) {
   return hash;
 }
 
-#endif // KLEE_VERIFICATION
+#endif  // KLEE_VERIFICATION

@@ -20,6 +20,6 @@ extern struct str_field_descr counter_descrs[1];
 extern struct nested_field_descr counter_nests[0];
 
 bool counter_invariant(void *counter, int index, void *state);
-#endif // KLEE_VERIFICATION
+#endif  // KLEE_VERIFICATION
 
 #endif

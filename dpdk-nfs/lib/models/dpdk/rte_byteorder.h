@@ -14,4 +14,4 @@ static inline uint16_t rte_be_to_cpu_16(uint16_t x) {
   return ((x & UINT16_C(0x00FF)) << 8) | ((x & UINT16_C(0xFF00)) >> 8);
 }
 
-#endif //_RTE_BYTEORDER_H_INCLUDED_
+#endif  //_RTE_BYTEORDER_H_INCLUDED_

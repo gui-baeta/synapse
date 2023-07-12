@@ -14,7 +14,7 @@
 // File parsing, is not really the kind of code we want to verify.
 #ifdef KLEE_VERIFICATION
 void fill_table_from_file(struct State *state, struct nf_config *config) {}
-#else // KLEE_VERIFICATION
+#else  // KLEE_VERIFICATION
 
 bool consume_until_separator(FILE *file, char *buffer, int max) {
   int i = 0;

@@ -17,8 +17,10 @@ static int VGA_COLUMN_POS = 0;
 #define VGA_COLOR_CODE 14
 
 static void nfos_vga_clear_row(int row) {
-  static const struct vga_char blank = {.ascii_char = (uint8_t)' ',
-                                        .color_code = VGA_COLOR_CODE, };
+  static const struct vga_char blank = {
+      .ascii_char = (uint8_t)' ',
+      .color_code = VGA_COLOR_CODE,
+  };
 
   for (int i = 0; i < VGA_WIDTH; i++) {
     VGA_BUFFER[row][i] = blank;
@@ -48,7 +50,10 @@ static void nfos_vga_write_byte(uint8_t c) {
     int row = VGA_HEIGHT - 1;
     int col = VGA_COLUMN_POS;
 
-    struct vga_char vga_c = {.ascii_char = c, .color_code = VGA_COLOR_CODE, };
+    struct vga_char vga_c = {
+        .ascii_char = c,
+        .color_code = VGA_COLOR_CODE,
+    };
 
     VGA_BUFFER[row][col] = vga_c;
 

@@ -13,7 +13,7 @@
 
 // VeriFast doesn't support unions, so this is a bit messy...
 struct rte_mbuf {
-//	MARKER cacheline0;
+  //	MARKER cacheline0;
   void *buf_addr;
   //	union {
   rte_iova_t buf_iova;
@@ -50,22 +50,22 @@ struct rte_mbuf {
   uint16_t data_len;
   uint16_t vlan_tci;
   //	union {
-  uint32_t // rss;
-      //		struct {
-      //			union {
-      //				struct {
-      //					uint16_t hash;
-      //					uint16_t id;
-      //				};
-      //				uint32_t lo;
-      //			};
-      //			uint32_t hi;
-      //		} fdir;
-      //		struct {
-      //			uint32_t lo;
-      //			uint32_t hi;
-      //		} sched;
-      //		uint32_t usr;
+  uint32_t  // rss;
+            //		struct {
+            //			union {
+            //				struct {
+            //					uint16_t hash;
+            //					uint16_t id;
+            //				};
+            //				uint32_t lo;
+            //			};
+            //			uint32_t hi;
+            //		} fdir;
+            //		struct {
+            //			uint32_t lo;
+            //			uint32_t hi;
+            //		} sched;
+            //		uint32_t usr;
       /*}*/ hash;
   uint16_t vlan_tci_outer;
   uint16_t buf_len;
@@ -78,11 +78,11 @@ struct rte_mbuf {
   struct rte_mempool *pool;
   struct rte_mbuf *next;
   /*
-    The memory layout doesn't matter here, as the structure is being initialized
-    and used only through its fields. The overflow bounds are higher, but in
-    this particular case it does not affect soundness, because fields are never
-    written to in the user code and initialized with bounded values in the
-    models.
+    The memory layout doesn't matter here, as the structure is being
+    initialized and used only through its fields. The overflow bounds are
+    higher, but in this particular case it does not affect soundness, because
+    fields are never written to in the user code and initialized with bounded
+    values in the models.
 
     The reason I dismissed the bit-width is that VeriFast doesn't support it.
 
@@ -91,14 +91,14 @@ struct rte_mbuf {
   //	union {
   //		uint64_t tx_offload;
   //		struct {
-  uint64_t l2_len; //:7;
-  uint64_t l3_len; //:9;
-                   //			uint64_t l4_len:8;
-                   //			uint64_t tso_segsz:16;
-                   //			uint64_t outer_l3_len:9;
-                   //			uint64_t outer_l2_len:7;
-                   //		};
-                   //	};
+  uint64_t l2_len;  //: 7;
+  uint64_t l3_len;  //: 9;
+                    //			uint64_t l4_len:8;
+                    //			uint64_t tso_segsz:16;
+                    //			uint64_t outer_l3_len:9;
+                    //			uint64_t outer_l2_len:7;
+                    //		};
+                    //	};
   uint16_t priv_size;
   uint16_t timesync;
   uint32_t seqn;
@@ -106,7 +106,7 @@ struct rte_mbuf {
 
 #define RTE_MBUF_DEFAULT_BUF_SIZE (2048 + 128)
 
-#define rte_pktmbuf_mtod_offset(m, t, o)                                       \
+#define rte_pktmbuf_mtod_offset(m, t, o) \
   ((t)((char *)(m)->buf_addr + (m)->data_off + (o)))
 #define rte_pktmbuf_mtod(m, t) rte_pktmbuf_mtod_offset(m, t, 0)
 /**
@@ -126,9 +126,9 @@ struct rte_mbuf {
  */
 #define PKT_TX_IPV4 (1ULL << 55)
 
-#define PKT_TX_TCP_CKSUM                                                       \
+#define PKT_TX_TCP_CKSUM \
   (1ULL << 52) /**< TCP cksum of TX pkt. computed by NIC. */
-#define PKT_TX_UDP_CKSUM                                                       \
+#define PKT_TX_UDP_CKSUM \
   (3ULL << 52) /**< UDP cksum of TX pkt. computed by NIC. */
 
 static void rte_mbuf_sanity_check(const struct rte_mbuf *m, int is_header) {
@@ -147,9 +147,9 @@ static struct rte_mempool *rte_pktmbuf_pool_create(const char *name, unsigned n,
   assert(strlen(name) < RTE_MEMZONE_NAMESIZE);
   assert(n > 0);
   assert(cache_size >= 0);
-  assert(priv_size == 0); // we only support that
-  assert(data_room_size == RTE_MBUF_DEFAULT_BUF_SIZE); // same
-  assert(socket_id == 0);                              // same
+  assert(priv_size == 0);                               // we only support that
+  assert(data_room_size == RTE_MBUF_DEFAULT_BUF_SIZE);  // same
+  assert(socket_id == 0);                               // same
 
   struct rte_mempool *pool = malloc(sizeof(struct rte_mempool));
   strcpy(pool->name, name);
@@ -170,37 +170,37 @@ static void rte_pktmbuf_free(struct rte_mbuf *m) {
 static void rte_mbuf_raw_free(struct rte_mbuf *m) { free(m); }
 
 static uint16_t rte_pktmbuf_data_room_size(struct rte_mempool *mp) {
-  return RTE_MBUF_DEFAULT_BUF_SIZE; // see pool_create
+  return RTE_MBUF_DEFAULT_BUF_SIZE;  // see pool_create
 }
 
 static uint16_t rte_pktmbuf_priv_size(struct rte_mempool *mp) {
-  return 0; // see pool_create
+  return 0;  // see pool_create
 }
 
 static void rte_mbuf_refcnt_set(struct rte_mbuf *m, uint16_t new_value) {
   m->refcnt = new_value;
 }
 
-static char* rte_pktmbuf_adj(struct rte_mbuf *m, uint16_t len) {
+static char *rte_pktmbuf_adj(struct rte_mbuf *m, uint16_t len) {
   if (len > m->data_len) {
-    return NULL; 
+    return NULL;
   }
 
   m->data_len = (uint16_t)(m->data_len - len);
   m->data_off = (uint16_t)(m->data_off + len);
-  m->pkt_len  = (m->pkt_len - len);
+  m->pkt_len = (m->pkt_len - len);
 
   return (char *)m->buf_addr + m->data_off;
 }
 
-static char* rte_pktmbuf_prepend(struct rte_mbuf* m, uint16_t len) {
+static char *rte_pktmbuf_prepend(struct rte_mbuf *m, uint16_t len) {
   if (len > m->data_off) {
     return NULL;
   }
- 
+
   m->data_off = (uint16_t)(m->data_off - len);
   m->data_len = (uint16_t)(m->data_len + len);
-  m->pkt_len  = (m->pkt_len + len);
+  m->pkt_len = (m->pkt_len + len);
 
   return (char *)m->buf_addr + m->data_off;
 }

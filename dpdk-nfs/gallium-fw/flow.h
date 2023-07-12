@@ -20,11 +20,11 @@ bool flow_eq(void* a, void* b);
 void flow_allocate(void* obj);
 
 #ifdef KLEE_VERIFICATION
-#  include <klee/klee.h>
-#  include "lib/models/str-descr.h"
+#include <klee/klee.h>
+#include "lib/models/str-descr.h"
 
 extern struct str_field_descr flow_descrs[6];
 extern struct nested_field_descr flow_nests[0];
-#endif//KLEE_VERIFICATION
+#endif  // KLEE_VERIFICATION
 
 #endif

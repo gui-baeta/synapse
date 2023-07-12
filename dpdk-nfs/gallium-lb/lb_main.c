@@ -38,11 +38,11 @@ bool backend_from_flow(struct Flow *flow, uint32_t *new_dst_addr,
 bool process_udp(struct rte_ipv4_hdr *ipv4_header,
                  struct rte_udp_hdr *udp_header, vigor_time_t now,
                  uint32_t *new_dst_addr) {
-  struct Flow flow = { .src_addr = ipv4_header->src_addr,
-                       .dst_addr = ipv4_header->dst_addr,
-                       .src_port = udp_header->src_port,
-                       .dst_port = udp_header->dst_port,
-                       .protocol = ipv4_header->next_proto_id };
+  struct Flow flow = {.src_addr = ipv4_header->src_addr,
+                      .dst_addr = ipv4_header->dst_addr,
+                      .src_port = udp_header->src_port,
+                      .dst_port = udp_header->dst_port,
+                      .protocol = ipv4_header->next_proto_id};
 
   if (!backend_from_flow(&flow, new_dst_addr, now)) {
     NF_DEBUG("Dropping.");
@@ -64,11 +64,11 @@ bool process_udp(struct rte_ipv4_hdr *ipv4_header,
 bool process_tcp(struct rte_ipv4_hdr *ipv4_header,
                  struct rte_tcp_hdr *tcp_header, vigor_time_t now,
                  uint32_t *new_dst_addr) {
-  struct Flow flow = { .src_addr = ipv4_header->src_addr,
-                       .dst_addr = ipv4_header->dst_addr,
-                       .src_port = tcp_header->src_port,
-                       .dst_port = tcp_header->dst_port,
-                       .protocol = ipv4_header->next_proto_id };
+  struct Flow flow = {.src_addr = ipv4_header->src_addr,
+                      .dst_addr = ipv4_header->dst_addr,
+                      .src_port = tcp_header->src_port,
+                      .dst_port = tcp_header->dst_port,
+                      .protocol = ipv4_header->next_proto_id};
 
   int expire = tcp_header->tcp_flags & (RTE_TCP_FIN_FLAG | RTE_TCP_RST_FLAG);
 

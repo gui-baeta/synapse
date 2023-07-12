@@ -64,7 +64,8 @@ int pipe(int pipefd[2]) {
   pipefd[0] = STUB_PIPE_FD_READ;
   pipefd[1] = STUB_PIPE_FD_WRITE;
 
-  // "On success, zero is returned.  On error, -1 is returned, and errno is set
+  // "On success, zero is returned.  On error, -1 is returned, and errno is
+  // set
   //  appropriately."
   return 0;
 }

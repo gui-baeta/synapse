@@ -12,4 +12,4 @@ vigor_time_t restart_time(void);
 
 vigor_time_t get_start_time(void);
 
-#endif //_MY_TIME_STUB_CONTROL_H_INCLUDED_
+#endif  //_MY_TIME_STUB_CONTROL_H_INCLUDED_

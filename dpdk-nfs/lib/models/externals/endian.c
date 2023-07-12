@@ -6,7 +6,7 @@
 #if __BYTE_ORDER == __BIG_ENDIAN
 #define X(x) x
 #else
-#define X(x) (((x) / 256 | (x) * 256) % 65536)
+#define X(x) (((x) / 256 | (x)*256) % 65536)
 #endif
 
 static const unsigned short table[] = {
@@ -64,7 +64,8 @@ static const unsigned short table[] = {
     0,        0,        0,        0,        0,        0,        0,
     0,        0,        0,        0,        0,        0,        0,
     0,        0,        0,        0,        0,        0,        0,
-    0,        0,        0,        0,        0,        0, };
+    0,        0,        0,        0,        0,        0,
+};
 
 #undef X
 

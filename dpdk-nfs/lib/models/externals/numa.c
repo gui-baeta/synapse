@@ -8,14 +8,14 @@ static int NUMA_AVAILABLE = 42;
 static bool NUMA_NODEMASK_CREATED = false;
 
 int numa_available(void) {
-  // Before any other calls in this library can be used numa_available() must be
-  // called. If it returns -1, all other functions in this library are
+  // Before any other calls in this library can be used numa_available() must
+  // be called. If it returns -1, all other functions in this library are
   // undefined.
   if (NUMA_AVAILABLE == 42) {
     NUMA_AVAILABLE = -1;
     // let's not double paths, just expose the dpdk bug...
-    // NUMA_AVAILABLE = klee_range(-1, 1, "numa_available"); // 1 is exclusive,
-    // this this will be -1 or 0 true;
+    // NUMA_AVAILABLE = klee_range(-1, 1, "numa_available"); // 1 is
+    // exclusive, this this will be -1 or 0 true;
   }
   return NUMA_AVAILABLE;
 }
@@ -57,7 +57,7 @@ long get_mempolicy(int *policy,
 #else
                    int flags
 #endif
-                   ) {
+) {
   // http://man7.org/linux/man-pages/man2/get_mempolicy.2.html
   if (flags == 0) {
     // When flags is 0, addr must be specified as NULL.
@@ -67,7 +67,8 @@ long get_mempolicy(int *policy,
     // thread's default policy (as set by set_mempolicy(2)) is returned, in
     // the buffers pointed to by mode and nodemask.  The value returned in
     // these arguments may be used to restore the thread's policy to its
-    // state at the time of the call to get_mempolicy() using set_mempolicy(2).
+    // state at the time of the call to get_mempolicy() using
+    // set_mempolicy(2).
     *policy = 0;
 
     // On success, get_mempolicy() returns 0; on error, -1 is returned and

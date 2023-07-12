@@ -20,4 +20,4 @@ void backend_allocate(void *obj);
 
 extern struct str_field_descr backend_descrs[2];
 extern struct nested_field_descr backend_nests[0];
-#endif // KLEE_VERIFICATION
+#endif  // KLEE_VERIFICATION

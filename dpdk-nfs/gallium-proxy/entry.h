@@ -19,4 +19,4 @@ void entry_allocate(void *obj);
 
 extern struct str_field_descr entry_descrs[1];
 extern struct nested_field_descr entry_nests[0];
-#endif // KLEE_VERIFICATION
+#endif  // KLEE_VERIFICATION

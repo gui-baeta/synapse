@@ -37,11 +37,11 @@ bool allocate_flow(struct State *state, struct Flow *flow,
 }
 
 void expire_flows(struct State *state, vigor_time_t now) {
-  assert(now >= 0); // we don't support the past
+  assert(now >= 0);  // we don't support the past
   assert(sizeof(vigor_time_t) <= sizeof(uint64_t));
-  uint64_t time_u = (uint64_t)now; // OK because of the two asserts
+  uint64_t time_u = (uint64_t)now;  // OK because of the two asserts
   vigor_time_t vigor_time_expiration = (vigor_time_t)state->expiration_time;
-  vigor_time_t last_time = time_u - vigor_time_expiration * 1000; // us to ns
+  vigor_time_t last_time = time_u - vigor_time_expiration * 1000;  // us to ns
   expire_items_single_map(state->allocator, state->flows, state->table,
                           last_time);
 }

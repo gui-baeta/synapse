@@ -87,9 +87,8 @@ int pthread_setname_np(pthread_t thread, const char *name) {
 
 int pthread_barrier_init(pthread_barrier_t *barrier,
                          const pthread_barrierattr_t *attr, unsigned count) {
-  // "Upon successful completion, these functions shall return zero; otherwise,
-  // an error
-  // number shall be returned to indicate the error."
+  // "Upon successful completion, these functions shall return zero;
+  // otherwise, an error number shall be returned to indicate the error."
   // -- https://linux.die.net/man/3/pthread_barrier_init
   return 0;
 }
@@ -97,9 +96,8 @@ int pthread_barrier_init(pthread_barrier_t *barrier,
 int pthread_barrier_wait(pthread_barrier_t *barrier) {
   // "Upon successful completion, the pthread_barrier_wait() function shall
   // return
-  // PTHREAD_BARRIER_SERIAL_THREAD for a single (arbitrary) thread synchronized
-  // at the
-  // barrier and zero for each of the other threads."
+  // PTHREAD_BARRIER_SERIAL_THREAD for a single (arbitrary) thread
+  // synchronized at the barrier and zero for each of the other threads."
   // -- https://linux.die.net/man/3/pthread_barrier_wait
   return 0;
 }

@@ -32,7 +32,7 @@ unsigned find_next_power_of_2_bigger_than(uint32_t d) {
 }
 
 struct str_field_descr hash_descrs[] = {
-  { offsetof(struct hash, value), sizeof(uint32_t), 0, "value" },
+    {offsetof(struct hash, value), sizeof(uint32_t), 0, "value"},
 };
 struct nested_field_descr hash_nests[] = {};
 
@@ -65,7 +65,7 @@ unsigned hash_hash(void *obj) {
 }
 
 struct str_field_descr bucket_descrs[] = {
-  { offsetof(struct bucket, value), sizeof(uint32_t), 0, "value" },
+    {offsetof(struct bucket, value), sizeof(uint32_t), 0, "value"},
 };
 struct nested_field_descr bucket_nests[] = {};
 

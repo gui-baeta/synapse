@@ -1,6 +1,5 @@
 BasedOnStyle: Google
-IndentWidth: 4
-TabWidth: 4
-UseTab: Always
+IndentWidth: 2
+TabWidth: 2
 AccessModifierOffset: -4
 SortIncludes: false

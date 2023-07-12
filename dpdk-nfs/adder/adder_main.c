@@ -4,7 +4,7 @@
 
 #ifdef KLEE_VERIFICATION
 #include "lib/models/str-descr.h"
-#endif // KLEE_VERIFICATION
+#endif  // KLEE_VERIFICATION
 
 struct nf_config config;
 
@@ -18,9 +18,9 @@ struct custom_chunk_t {
 
 #ifdef KLEE_VERIFICATION
 static struct str_field_descr custom_chunk_fields[] = {
-  { offsetof(struct custom_chunk_t, a), sizeof(uint32_t), 0, "a" },
-  { offsetof(struct custom_chunk_t, b), sizeof(uint32_t), 0, "b" },
-  { offsetof(struct custom_chunk_t, c), sizeof(uint32_t), 0, "c" },
+    {offsetof(struct custom_chunk_t, a), sizeof(uint32_t), 0, "a"},
+    {offsetof(struct custom_chunk_t, b), sizeof(uint32_t), 0, "b"},
+    {offsetof(struct custom_chunk_t, c), sizeof(uint32_t), 0, "c"},
 };
 #endif
 

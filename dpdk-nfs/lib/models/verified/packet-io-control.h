@@ -6,7 +6,9 @@
 #include <rte_ether.h>
 #include <rte_ip.h>
 #include "lib/verified/tcpudp_hdr.h"
-#define MBUF_MIN_SIZE (sizeof(struct rte_ether_hdr) + sizeof(struct rte_ipv4_hdr) + sizeof(struct tcpudp_hdr))
+#define MBUF_MIN_SIZE                                           \
+  (sizeof(struct rte_ether_hdr) + sizeof(struct rte_ipv4_hdr) + \
+   sizeof(struct tcpudp_hdr))
 
 typedef bool (*chunk_constraint)(void *);
 
@@ -19,4 +21,4 @@ void packet_set_next_chunk_layout(void *p, uint32_t length,
 
 bool packet_is_last_borrowed_chunk(void *p, void *chunk);
 
-#endif //_PACKET_IO_STUB_CONTROL_H_INCLUDED_
+#endif  //_PACKET_IO_STUB_CONTROL_H_INCLUDED_

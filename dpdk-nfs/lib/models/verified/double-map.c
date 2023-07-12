@@ -128,9 +128,9 @@ __attribute__((noinline)) int dmap_allocate(
     klee_make_symbolic(value_symbol, prealloc_size, "dmap_value");
     memcpy((*map_out)->value, value_symbol, prealloc_size);
 
-    // Do not assume the ent_cond here, because depending on what comes next,
-    // we may change the key_a, key_b or value. we assume the condition after
-    // that change.
+    // Do not assume the ent_cond here, because depending on what comes
+    // next, we may change the key_a, key_b or value. we assume the
+    // condition after that change.
 
     DENY(*map_out);
     return 1;

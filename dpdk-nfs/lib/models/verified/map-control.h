@@ -46,4 +46,4 @@ void map_set_entry_condition(struct Map *map, map_entry_condition *cond,
 
 void map_reset(struct Map *map);
 
-#endif //_MAP_STUB_CONTROL_H_INCLUDED_
+#endif  //_MAP_STUB_CONTROL_H_INCLUDED_

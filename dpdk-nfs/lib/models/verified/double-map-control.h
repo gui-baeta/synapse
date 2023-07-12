@@ -20,4 +20,4 @@ void dmap_set_layout(struct DoubleMap *map,
                      int val_nests_count);
 void dmap_reset(struct DoubleMap *map, int capacity);
 
-#endif //_DOUBLE_MAP_STUB_CONTROL_H_INCLUDED_
+#endif  //_DOUBLE_MAP_STUB_CONTROL_H_INCLUDED_

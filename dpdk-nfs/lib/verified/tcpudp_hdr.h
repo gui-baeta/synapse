@@ -8,8 +8,8 @@ struct tcpudp_hdr {
   uint16_t dst_port;
 }
 #ifdef _NO_VERIFAST_
-__attribute__((__packed__)) // VeriFast does not understand attributes
-#endif                      //_NO_VERIFAST_
-    ;
+__attribute__((__packed__))  // VeriFast does not understand attributes
+#endif                       //_NO_VERIFAST_
+;
 
-#endif //_TCPUDP_H_INCLUDED_
+#endif  //_TCPUDP_H_INCLUDED_

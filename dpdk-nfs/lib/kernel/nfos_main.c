@@ -21,7 +21,10 @@ extern struct nfos_pci_nic *stub_hardware_get_nics(int *n);
 #endif
 
 int main(void) {
-  static char *argv[] = {NF_ARGUMENTS, NULL, };
+  static char *argv[] = {
+      NF_ARGUMENTS,
+      NULL,
+  };
 
   static const int argc = (sizeof(argv) / sizeof(argv[0])) - 1;
 

@@ -9,20 +9,19 @@
 #include "nf-util.h"
 #include "nf.h"
 
-#define PARSE_ERROR(format, ...)                                               \
-  nf_config_usage();                                                           \
-  fprintf(stderr, format, ##__VA_ARGS__);                                      \
+#define PARSE_ERROR(format, ...)          \
+  nf_config_usage();                      \
+  fprintf(stderr, format, ##__VA_ARGS__); \
   exit(EXIT_FAILURE);
 
 void nf_config_init(int argc, char **argv) {
   uint16_t nb_devices = rte_eth_dev_count_avail();
 
-  struct option long_options[] = { { "lan", required_argument, NULL, 'l' },
-                                   { "wan", required_argument, NULL, 'w' },
-                                   { "extip", required_argument, NULL, 'i' },
-                                   { "max-flows", required_argument, NULL,
-                                     'f' },
-                                   { NULL, 0, NULL, 0 } };
+  struct option long_options[] = {{"lan", required_argument, NULL, 'l'},
+                                  {"wan", required_argument, NULL, 'w'},
+                                  {"extip", required_argument, NULL, 'i'},
+                                  {"max-flows", required_argument, NULL, 'f'},
+                                  {NULL, 0, NULL, 0}};
 
   int opt;
   while ((opt = getopt_long(argc, argv, "l:w:i:f:", long_options, NULL)) !=
@@ -67,12 +66,13 @@ void nf_config_init(int argc, char **argv) {
 }
 
 void nf_config_usage(void) {
-  NF_INFO("Usage:\n"
-          "[DPDK EAL options] --\n"
-          "\t--lan <device>: set device to be the main LAN device.\n"
-          "\t--wan <device>: set device to be the external one.\n"
-          "\t--extip <ip>: external IP address.\n"
-          "\t--max-flows <n>: flow table capacity.\n");
+  NF_INFO(
+      "Usage:\n"
+      "[DPDK EAL options] --\n"
+      "\t--lan <device>: set device to be the main LAN device.\n"
+      "\t--wan <device>: set device to be the external one.\n"
+      "\t--extip <ip>: external IP address.\n"
+      "\t--max-flows <n>: flow table capacity.\n");
 }
 
 void nf_config_print(void) {
