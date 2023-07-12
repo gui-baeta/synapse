@@ -1,5 +1,17 @@
 # SyNAPSE traffic generator
 
 ```
-$ sudo ./build/bin/pktgen --no-huge --no-shconf --vdev "net_tap0,iface=test_rx" --vdev "net_tap1,iface=test_tx" -- --total-flows 1 --tx 1 --rx 0 --tx-cores 4 --rx-cores 4
+$ sudo ./build/bin/pktgen \
+    -m 8192 \
+    --no-huge \
+    --no-shconf \
+    --vdev "net_tap0,iface=test_rx" \
+    --vdev "net_tap1,iface=test_tx" \
+    -- \
+    --total-flows 2 \
+    --tx 1 \
+    --rx 0 \
+    --tx-cores 4 \
+    --crc-unique-flows \
+    --crc-bits 16
 ```

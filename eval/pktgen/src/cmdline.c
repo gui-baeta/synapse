@@ -50,11 +50,41 @@ cmdline_parse_token_string_t pktgen_rate_token_cmd =
 cmdline_parse_token_string_t pktgen_churn_token_cmd =
     TOKEN_STRING_INITIALIZER(struct pktgen_int_params, cmd, "churn");
 cmdline_parse_token_num_t pktgen_int_token_param =
-    TOKEN_NUM_INITIALIZER(struct pktgen_int_params, param, UINT32);
+    TOKEN_NUM_INITIALIZER(struct pktgen_int_params, param, RTE_UINT32);
 
 static inline void signal_new_config() {
   rte_smp_mb();
   rte_atomic64_inc((rte_atomic64_t *)&config.runtime.update_cnt);
+}
+
+void pktgen_start() {
+  config.runtime.running = true;
+  signal_new_config();
+}
+
+void pktgen_stop() {
+  config.runtime.running = false;
+  signal_new_config();
+}
+
+void pktgen_rate(rate_gbps_t rate) {
+  config.rate = rate;
+  config.runtime.rate_per_core = config.rate / config.tx.num_cores;
+  signal_new_config();
+}
+
+void pktgen_churn(churn_fpm_t churn) {
+  uint16_t num_base_flows = config.num_flows / 2;
+  config.runtime.churn = churn / 60;
+
+  // Getting the churn per flow.
+  config.runtime.flow_ttl =
+      (1e9 * (uint64_t)num_base_flows) / config.runtime.churn;
+
+  // We must divide the churn among all the workers.
+  config.runtime.flow_ttl *= config.tx.num_cores;
+
+  signal_new_config();
 }
 
 static void pktgen_quit_callback(__rte_unused void *ptr_params,
@@ -66,48 +96,39 @@ static void pktgen_quit_callback(__rte_unused void *ptr_params,
 static void pktgen_start_callback(__rte_unused void *ptr_params,
                                   __rte_unused struct cmdline *ctx,
                                   __rte_unused void *ptr_data) {
-  config.runtime.running = true;
-  signal_new_config();
+  pktgen_start();
 }
 
 static void pktgen_stop_callback(__rte_unused void *ptr_params,
                                  __rte_unused struct cmdline *ctx,
                                  __rte_unused void *ptr_data) {
-  config.runtime.running = false;
-  signal_new_config();
+  pktgen_stop();
 }
 
 static void pktgen_stats_callback(__rte_unused void *ptr_params,
                                   __rte_unused struct cmdline *ctx,
                                   __rte_unused void *ptr_data) {
-  pktgen_stats_display();
+  pktgen_stats_display(config.rx.port);
 }
 
 static void pktgen_rate_callback(__rte_unused void *ptr_params,
                                  __rte_unused struct cmdline *ctx,
                                  __rte_unused void *ptr_data) {
   struct pktgen_int_params *params = ptr_params;
-  config.rate = (double)params->param / 1000.0;
-  config.runtime.rate_per_core = config.rate / config.tx.num_cores;
-
-  signal_new_config();
+  rate_gbps_t rate = (double)params->param / 1000.0;
+  pktgen_rate(rate);
 }
 
 static void pktgen_churn_callback(__rte_unused void *ptr_params,
                                   __rte_unused struct cmdline *ctx,
                                   __rte_unused void *ptr_data) {
   struct pktgen_int_params *params = ptr_params;
-  uint16_t num_base_flows = config.num_flows / 2;
-  config.runtime.churn = (double)params->param / 60;
-  config.runtime.flow_ttl =
-      (1e9 * (uint64_t)num_base_flows) / config.runtime.churn;
-  config.runtime.flow_ttl_offset = config.runtime.flow_ttl / num_base_flows;
-
-  signal_new_config();
+  churn_fpm_t churn = (double)params->param;
+  pktgen_churn(churn);
 }
 
 CMDLINE_PARSE_INT_NTOKENS(1)
-pktgen_quit = {
+pktgen_quit_cmd = {
     .f = pktgen_quit_callback,
     .data = NULL,
     .help_str = "quit\n     Exit program",
@@ -115,7 +136,7 @@ pktgen_quit = {
 };
 
 CMDLINE_PARSE_INT_NTOKENS(1)
-pktgen_start = {
+pktgen_start_cmd = {
     .f = pktgen_start_callback,
     .data = NULL,
     .help_str = "start\n     Start packet generation",
@@ -123,7 +144,7 @@ pktgen_start = {
 };
 
 CMDLINE_PARSE_INT_NTOKENS(1)
-pktgen_stop = {
+pktgen_stop_cmd = {
     .f = pktgen_stop_callback,
     .data = NULL,
     .help_str = "stop\n     Stop packet generation",
@@ -131,7 +152,7 @@ pktgen_stop = {
 };
 
 CMDLINE_PARSE_INT_NTOKENS(1)
-pktgen_stats = {
+pktgen_stats_cmd = {
     .f = pktgen_stats_callback,
     .data = NULL,
     .help_str = "stats\n     Show stats",
@@ -139,7 +160,7 @@ pktgen_stats = {
 };
 
 CMDLINE_PARSE_INT_NTOKENS(2)
-pktgen_rate = {
+pktgen_rate_cmd = {
     .f = pktgen_rate_callback,
     .data = NULL,
     .help_str = "rate <rate>\n     Set rate in Mbps",
@@ -148,7 +169,7 @@ pktgen_rate = {
 };
 
 CMDLINE_PARSE_INT_NTOKENS(2)
-pktgen_churn = {
+pktgen_churn_cmd = {
     .f = pktgen_churn_callback,
     .data = NULL,
     .help_str = "churn <churn>\n     Set churn in fpm",
@@ -157,12 +178,12 @@ pktgen_churn = {
 };
 
 cmdline_parse_ctx_t list_prompt_commands[] = {
-    (cmdline_parse_inst_t *)&pktgen_quit,
-    (cmdline_parse_inst_t *)&pktgen_start,
-    (cmdline_parse_inst_t *)&pktgen_stop,
-    (cmdline_parse_inst_t *)&pktgen_stats,
-    (cmdline_parse_inst_t *)&pktgen_rate,
-    (cmdline_parse_inst_t *)&pktgen_churn,
+    (cmdline_parse_inst_t *)&pktgen_quit_cmd,
+    (cmdline_parse_inst_t *)&pktgen_start_cmd,
+    (cmdline_parse_inst_t *)&pktgen_stop_cmd,
+    (cmdline_parse_inst_t *)&pktgen_stats_cmd,
+    (cmdline_parse_inst_t *)&pktgen_rate_cmd,
+    (cmdline_parse_inst_t *)&pktgen_churn_cmd,
     NULL,
 };
 
