@@ -17,6 +17,3 @@
 	path = deps/llvm
 	url = https://github.com/fchamicapereira/llvm-project
 	branch = synapse
-[submodule "eval/util/netexp"]
-	path = eval/util/netexp
-	url = git@github.com:fchamicapereira/netexp.git
