@@ -1,5 +1,3 @@
-#include "pktgen.h"
-
 #include <rte_cycles.h>
 #include <rte_eal.h>
 #include <rte_ethdev.h>
@@ -22,6 +20,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "pktgen.h"
 #include "tsc_clock.h"
 
 // Source/destination MACs
@@ -131,11 +130,11 @@ void pktgen_stats_display(uint16_t port_id) {
 }
 
 // Initializes a given port using global settings.
-static inline int port_init(uint16_t port, unsigned num_rx_cores,
-                            unsigned num_tx_cores,
+static inline int port_init(uint16_t port, unsigned num_rx_queues,
+                            unsigned num_tx_queues,
                             struct rte_mempool** mbuf_pools) {
   struct rte_eth_conf port_conf = port_conf_default;
-  const uint16_t rx_rings = num_rx_cores, tx_rings = num_tx_cores;
+  const uint16_t rx_rings = num_rx_queues, tx_rings = num_tx_queues;
   uint16_t nb_rxd = DESC_RING_SIZE;
   uint16_t nb_txd = DESC_RING_SIZE;
   int retval;
@@ -200,7 +199,6 @@ static inline int port_init(uint16_t port, unsigned num_rx_cores,
   /* Start the port. */
   retval = rte_eth_dev_start(port);
   if (retval < 0) return retval;
-
 
   return 0;
 }
@@ -552,7 +550,7 @@ int main(int argc, char* argv[]) {
   }
 
   /* Initialize all ports. */
-  if (port_init(config.rx.port, 0, 0, mbufs_pools))
+  if (port_init(config.rx.port, 1, 1, mbufs_pools))
     rte_exit(EXIT_FAILURE, "Cannot init rx port %" PRIu16 "\n", 0);
 
   if (port_init(config.tx.port, 0, config.tx.num_cores, mbufs_pools))
@@ -578,8 +576,8 @@ int main(int argc, char* argv[]) {
   printf("Waiting for workers...\n");
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
-  rate_mbps_t rate = 100000;
-  churn_fpm_t churn = 100000;
+  rate_mbps_t rate = 50000;
+  churn_fpm_t churn = 1000000;
 
   printf("Trying %.2lf Mbps rate churn %lu fpm...\n", rate, churn);
 
@@ -609,12 +607,12 @@ int main(int argc, char* argv[]) {
   uint64_t rx_unicast_packets;
   if (rte_eth_xstats_get_id_by_name(config.rx.port, "rx_unicast_packets",
                                     &rx_unicast_packets_stat_id) != 0) {
-    printf("saaaad 1\n");
+    printf("xstats error\n");
     exit(1);
   }
   if (rte_eth_xstats_get_by_id(config.rx.port, &rx_unicast_packets_stat_id,
                                &rx_unicast_packets, 1) < 0) {
-    printf("saaaad 2\n");
+    printf("xstats error\n");
     exit(1);
   }
 
