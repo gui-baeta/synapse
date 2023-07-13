@@ -1,3 +1,5 @@
+#include "pktgen.h"
+
 #include <rte_cycles.h>
 #include <rte_eal.h>
 #include <rte_ethdev.h>
@@ -20,7 +22,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include "pktgen.h"
 #include "tsc_clock.h"
 
 // Source/destination MACs
@@ -39,6 +40,8 @@ static const struct rte_eth_conf port_conf_default = {};
 
 // Per worker configuration
 struct worker_config_t {
+  bool ready;
+
   struct rte_mempool* pool;
   uint16_t queue_id;
 
@@ -50,84 +53,13 @@ struct worker_config_t {
   worker_config_t(struct rte_mempool* _pool, uint16_t _queue_id,
                   bytes_t _pkt_size, const std::vector<flow_t>& _flows,
                   const runtime_config_t* _runtime)
-      : pool(_pool),
+      : ready(false),
+        pool(_pool),
         queue_id(_queue_id),
         pkt_size(_pkt_size),
         flows(_flows),
         runtime(_runtime) {}
 };
-
-// Gets number of mbufs per worker.
-//
-// Each worker will be responsible for its own flows. The sum of all the flows
-// from all the workers equals the requested total number of flows.
-// Due to churn, each flow has a corresponding and unique churn flow. The worker
-// will continuously alternate between each flow and its corresponding churn
-// flow.
-//
-// This alternation is not simultaneous for all flows. To smooth out the
-// transitions, we iteratively transition one flow at a time. This means we
-// require a list of mbufs for each array of flows.
-//
-// Take F as the number of worker flows. A flow state array contains all the
-// flows to be transmited, thus having F/2 length. In total, we will have (F/2)
-// + 1 of these arrays, each transitioning one more flow than the previous one,
-// with the last one containing only churn flows. In total, we have F unique
-// flows, but (F/2)+1 arrays.
-//
-// Concluding, because we have (F/2)+1 with each array containing F/2 flows, we
-// require in total (F/2) * ((F/2)+1) mbufs, or (F**2 + 2F)/4.
-//
-// Finally, the total number of mbufs must be a power of 2, so we must find the
-// lowest power of 2 bigger than what we require.
-//
-// Example:
-// Total flows = 8
-// Flows = { f0, f1, f2, f3, f0', f1', f2', f3' }
-// Arrays = [
-//   [ f0, f1, f2, f3 ]
-//   [ f0', f1, f2, f3 ]
-//   [ f0', f1', f2, f3 ]
-//   [ f0', f1', f2', f3 ]
-//   [ f0', f1', f2', f3' ]
-// ]
-// Total number of arrays = F/2 + 1 = 5
-// Total number of mbufs = (F**2 + 2F)/4 = 20
-
-void pktgen_stats_display(uint16_t port_id) {
-  struct rte_eth_stats stats;
-
-  constexpr uint16_t max_num_stats = 1024;
-
-  rte_eth_stats_get(port_id, &stats);
-
-  printf("\n==== Statistics ====\n");
-  printf("Port %" PRIu8 "\n", port_id);
-  printf("    ipackets: %" PRIu64 "\n", stats.ipackets);
-  printf("    opackets: %" PRIu64 "\n", stats.opackets);
-  printf("    ibytes: %" PRIu64 "\n", stats.ibytes);
-  printf("    obytes: %" PRIu64 "\n", stats.obytes);
-  printf("    imissed: %" PRIu64 "\n", stats.imissed);
-  printf("    oerrors: %" PRIu64 "\n", stats.oerrors);
-  printf("    rx_nombuf: %" PRIu64 "\n", stats.rx_nombuf);
-  printf("\n");
-
-  printf("\n==== Extended Statistics ====\n");
-  int num_xstats = rte_eth_xstats_get(port_id, NULL, 0);
-  struct rte_eth_xstat xstats[max_num_stats];
-  if (rte_eth_xstats_get(port_id, xstats, num_xstats) != num_xstats) {
-    printf("Cannot get xstats\n");
-  }
-  struct rte_eth_xstat_name xstats_names[max_num_stats];
-  if (rte_eth_xstats_get_names(port_id, xstats_names, num_xstats) !=
-      num_xstats) {
-    printf("Cannot get xstats\n");
-  }
-  for (int i = 0; i < num_xstats; ++i) {
-    printf("%s: %" PRIu64 "\n", xstats_names[i].name, xstats[i].value);
-  }
-  printf("\n");
-}
 
 // Initializes a given port using global settings.
 static inline int port_init(uint16_t port, unsigned num_rx_queues,
@@ -146,8 +78,8 @@ static inline int port_init(uint16_t port, unsigned num_rx_queues,
 
   retval = rte_eth_dev_info_get(port, &dev_info);
   if (retval != 0) {
-    printf("Error during getting device (port %u) info: %s\n", port,
-           strerror(-retval));
+    fprintf(stderr, "Error during getting device (port %u) info: %s\n", port,
+            strerror(-retval));
     return retval;
   }
 
@@ -206,9 +138,6 @@ static inline int port_init(uint16_t port, unsigned num_rx_queues,
 struct rte_mempool* create_mbuf_pool(unsigned lcore_id) {
   unsigned mbuf_entries = (MBUF_CACHE_SIZE + BURST_SIZE + NUM_SAMPLE_PACKETS);
   mbuf_entries = RTE_MAX(mbuf_entries, (unsigned)MIN_NUM_MBUFS);
-
-  printf("Creating mbuf pool for %u entries for lcore %u\n", mbuf_entries,
-         lcore_id);
 
   /* Creates a new mempool in memory to hold the mbufs. */
   char MBUF_POOL_NAME[20];
@@ -412,16 +341,16 @@ static int tx_worker_main(void* arg) {
                pkt_size_without_crc);
   }
 
-  printf("Lcore %u is ready.\n", rte_lcore_id());
+  // Triger clock scale calculation beforehand, as it pauses the execution for 1
+  // second.
+  clock_scale();
+
+  worker_config->ready = true;
   wait_to_start();
 
   auto chosen_flows_idxs = std::vector<uint8_t>(num_base_flows);
   auto flows_timers = std::vector<ticks_t>(num_base_flows);
   auto flows_offsets = std::vector<ticks_t>(num_base_flows);
-
-  // Triger clock scale calculation beforehand, as it pauses the execution for 1
-  // second.
-  clock_scale();
 
   uint64_t last_update_cnt = 0;
 
@@ -445,9 +374,10 @@ static int tx_worker_main(void* arg) {
   auto queue_id = worker_config->queue_id;
 
   for (uint32_t i = 0; i < num_base_flows; i++) {
-    // Spreading out the churn, to avoid bursty churn.
-    flows_timers[i] = first_tick + rte_rand() % flow_ticks;
     chosen_flows_idxs[i] = 0;
+    // Spreading out the churn, to avoid bursty churn.
+    ticks_t offset = flow_ticks > 0 ? rte_rand() % flow_ticks : 0;
+    flows_timers[i] = first_tick + offset;
   }
 
   // Run until the application is killed
@@ -463,9 +393,10 @@ static int tx_worker_main(void* arg) {
       first_tick = TscClock::now();
 
       for (uint32_t i = 0; i < num_base_flows; i++) {
-        // Spreading out the churn, to avoid bursty churn.
-        flows_timers[i] = first_tick + rte_rand() % flow_ticks;
         chosen_flows_idxs[i] = 0;
+        // Spreading out the churn, to avoid bursty churn.
+        ticks_t offset = flow_ticks > 0 ? rte_rand() % flow_ticks : 0;
+        flows_timers[i] = first_tick + offset;
       }
     }
 
@@ -557,6 +488,7 @@ int main(int argc, char* argv[]) {
     rte_exit(EXIT_FAILURE, "Cannot init tx port %" PRIu16 "\n", 0);
 
   auto flows_per_worker = generate_unique_flows_per_worker();
+  std::vector<worker_config_t*> workers_configs(config.tx.num_cores);
 
   for (unsigned i = 0; i < config.tx.num_cores; i++) {
     unsigned lcore_id = config.tx.cores[i];
@@ -564,6 +496,7 @@ int main(int argc, char* argv[]) {
     worker_config_t* worker_config =
         new worker_config_t(mbufs_pools[i], queue_id, config.pkt_size,
                             flows_per_worker[i], &config.runtime);
+    workers_configs[i] = worker_config;
     rte_eal_remote_launch(tx_worker_main, (void*)worker_config, lcore_id);
   }
 
@@ -571,22 +504,36 @@ int main(int argc, char* argv[]) {
   // though, we still need them.
   rte_free(mbufs_pools);
 
-  // pktgen_cmdline();
-
   printf("Waiting for workers...\n");
-  std::this_thread::sleep_for(std::chrono::seconds(1));
 
-  rate_mbps_t rate = 50000;
-  churn_fpm_t churn = 1000000;
+  for (auto worker_config : workers_configs) {
+    while (!worker_config->ready) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+  }
 
-  printf("Trying %.2lf Mbps rate churn %lu fpm...\n", rate, churn);
+  cmdline_start();
 
-  pktgen_rate(rate / 1e3);
-  pktgen_churn(churn);
-  pktgen_start();
-  printf("Running experiment...\n");
-  std::this_thread::sleep_for(std::chrono::seconds(10));
-  pktgen_stop();
+  // rate_mbps_t rate = 10 * 1000;
+  // churn_fpm_t churn = 100000;
+
+  // rate_mbps_t warmup_rate = 1;
+  // churn_fpm_t warmup_churn = 0;
+
+  // printf("Warming up...\n");
+
+  // cmd_rate(warmup_rate);
+  // cmd_churn(warmup_churn);
+  // cmd_start();
+  // std::this_thread::sleep_for(std::chrono::seconds(3));
+
+  // printf("Trying %.2lf Mbps rate churn %lu fpm...\n", rate, churn);
+  // cmd_rate(rate / 1e3);
+  // cmd_churn(churn);
+  // cmd_stats_reset();
+
+  // std::this_thread::sleep_for(std::chrono::seconds(10));
+  // cmd_stop();
 
   quit = true;
 
@@ -595,38 +542,11 @@ int main(int argc, char* argv[]) {
   // Wait for all processes to complete
   rte_eal_mp_wait_lcore();
 
-  pktgen_stats_display(config.rx.port);
-  // pktgen_stats_display(config.tx.port);
-
-  struct rte_eth_stats stats;
-  const uint16_t port_id = config.rx.port;
-
-  rte_eth_stats_get(port_id, &stats);
-
-  uint64_t rx_unicast_packets_stat_id;
-  uint64_t rx_unicast_packets;
-  if (rte_eth_xstats_get_id_by_name(config.rx.port, "rx_unicast_packets",
-                                    &rx_unicast_packets_stat_id) != 0) {
-    printf("xstats error\n");
-    exit(1);
-  }
-  if (rte_eth_xstats_get_by_id(config.rx.port, &rx_unicast_packets_stat_id,
-                               &rx_unicast_packets, 1) < 0) {
-    printf("xstats error\n");
-    exit(1);
+  for (auto worker_config : workers_configs) {
+    delete worker_config;
   }
 
-  printf("\n==== Statistics ====\n");
-  printf("Port %" PRIu8 "\n", port_id);
-  printf("    ipackets: %" PRIu64 "\n", stats.ipackets);
-  printf("    ibytes:   %" PRIu64 "\n", stats.ibytes);
-  printf("    unicast:  %" PRIu64 "\n", rx_unicast_packets);
-  printf("    *ibytes:  %" PRIu64 "\n",
-         rx_unicast_packets * (MIN_PKT_SIZE + 20) * 8);
-  printf("    Mbps:     %.2lf\n", ((double)(stats.ibytes * 8) / 1e6) / 10);
-  printf("    *Mbps:    %.2lf\n",
-         ((double)rx_unicast_packets * ((MIN_PKT_SIZE + 20) * 8) / 1e6) / 10);
-  printf("    Mpps:     %.2lf\n", ((double)rx_unicast_packets / 1e6) / 10);
+  cmd_stats_display();
 
   rte_eal_cleanup();
 

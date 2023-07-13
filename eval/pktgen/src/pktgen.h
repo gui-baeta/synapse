@@ -31,7 +31,7 @@ extern "C" {
 typedef uint64_t bits_t;
 typedef uint64_t bytes_t;
 
-#define MIN_PKT_SIZE ((bytes_t)64)    // No CRC
+#define MIN_PKT_SIZE ((bytes_t)60)    // No CRC
 #define MAX_PKT_SIZE ((bytes_t)1514)  // No CRC
 
 #define MIN_CRC_BITS 1
@@ -61,6 +61,8 @@ typedef uint64_t churn_fps_t;
 
 typedef double rate_gbps_t;
 typedef double rate_mbps_t;
+
+typedef double rate_mpps_t;
 
 struct runtime_config_t {
   bool running;
@@ -101,12 +103,13 @@ void config_init(int argc, char **argv);
 void config_print();
 void config_print_usage(char **argv);
 
-void pktgen_cmdline();
-void pktgen_stats_display(uint16_t port);
-void pktgen_start();
-void pktgen_stop();
-void pktgen_rate(rate_gbps_t rate);
-void pktgen_churn(churn_fpm_t churn);
+void cmdline_start();
+void cmd_stats_display();
+void cmd_stats_reset();
+void cmd_start();
+void cmd_stop();
+void cmd_rate(rate_gbps_t rate);
+void cmd_churn(churn_fpm_t churn);
 
 crc32_t calculate_crc32(byte_t *data, int len);
 
