@@ -1,5 +1,11 @@
 # SyNAPSE traffic generator
 
+## Info
+
+Pktgen uses **DPDK 22.11** to generate traffic.
+
+## Testing
+
 ```
 $ sudo ./build/bin/pktgen \
     -m 8192 \
