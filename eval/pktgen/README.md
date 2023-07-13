@@ -8,10 +8,10 @@ $ sudo ./build/bin/pktgen \
     --vdev "net_tap0,iface=test_rx" \
     --vdev "net_tap1,iface=test_tx" \
     -- \
-    --total-flows 2 \
+    --total-flows 4 \
     --tx 1 \
     --rx 0 \
-    --tx-cores 4 \
+    --tx-cores 1 \
     --crc-unique-flows \
     --crc-bits 16
 ```
