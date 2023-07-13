@@ -35,7 +35,6 @@ pktgen_path = ""
 rx_dev = "0000:00:00.0"
 tx_dev = "0000:00:00.0"
 tx_line_rate = -1 # in Gbps.
-nb_rx_cores = -1
 nb_tx_cores = -1
 
 [logs]
