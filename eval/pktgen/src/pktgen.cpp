@@ -546,8 +546,6 @@ int main(int argc, char* argv[]) {
     delete worker_config;
   }
 
-  cmd_stats_display();
-
   rte_eal_cleanup();
 
   return 0;
