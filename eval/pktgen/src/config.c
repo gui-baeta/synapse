@@ -199,9 +199,9 @@ void config_init(int argc, char **argv) {
       ", crc bits=%" PRIu16 ", max flows=%" PRIu16 ").\n",
       config.num_flows, config.crc_bits, 1 << config.crc_bits);
 
-  PARSER_ASSERT(config.tx.num_cores <= nb_cores,
-                "Invalid number of cores (tx=%" PRIu16 ", available=%" PRIu16
-                ").\n",
+  PARSER_ASSERT(config.tx.num_cores < nb_cores,
+                "Insufficient number of cores (main=1, tx=%" PRIu16
+                ", available=%" PRIu16 ").\n",
                 config.tx.num_cores, nb_cores);
 
   config.max_churn = ((double)(60.0 * config.num_flows)) /
