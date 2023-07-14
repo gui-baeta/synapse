@@ -72,12 +72,13 @@ void cmd_stats_display() {
   // good enough.
   uint64_t rx_pkts = rx_good_pkts + rx_missed_pkts;
   uint64_t tx_pkts = get_xstat(config.tx.port, "tx_good_packets");
-  float loss = (float)(tx_pkts - rx_pkts) / tx_pkts;
-
+  
   // Reseting stats is not atomic, so there's a chance we detect more packets
   // received that sent. It's not that problematic, but let's take that into
   // consideration.
   rx_pkts = RTE_MIN(rx_pkts, tx_pkts);
+
+  float loss = (float)(tx_pkts - rx_pkts) / tx_pkts;
 
   printf("\n");
   printf("~~~~~~ Pktgen ~~~~~~\n");
