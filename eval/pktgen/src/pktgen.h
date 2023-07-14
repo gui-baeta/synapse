@@ -31,8 +31,8 @@ extern "C" {
 typedef uint64_t bits_t;
 typedef uint64_t bytes_t;
 
-#define MIN_PKT_SIZE ((bytes_t)60)    // No CRC
-#define MAX_PKT_SIZE ((bytes_t)1514)  // No CRC
+#define MIN_PKT_SIZE ((bytes_t)64)    // With CRC
+#define MAX_PKT_SIZE ((bytes_t)1518)  // With CRC
 
 #define MIN_CRC_BITS 1
 #define MAX_CRC_BITS 32

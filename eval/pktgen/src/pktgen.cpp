@@ -199,8 +199,10 @@ static void generate_template_packet(byte_t* pkt) {
   udp_hdr->dgram_cksum = 0;
 
   // Fill payload with 1s.
+  constexpr uint16_t max_pkt_size_no_crc = MAX_PKT_SIZE - 4;
+
   byte_t* payload = (byte_t*)(((char*)udp_hdr) + sizeof(struct rte_udp_hdr));
-  bytes_t payload_size = MAX_PKT_SIZE - sizeof(struct rte_ether_hdr) -
+  bytes_t payload_size = max_pkt_size_no_crc - sizeof(struct rte_ether_hdr) -
                          sizeof(struct rte_ipv4_hdr) -
                          sizeof(struct rte_udp_hdr);
   for (bytes_t i = 0; i < payload_size; ++i) {
@@ -239,9 +241,8 @@ static std::vector<std::vector<flow_t>> generate_unique_flows_per_worker() {
 
   auto crc_mask = (uint32_t)((1 << (uint64_t)(config.crc_bits)) - 1);
 
+  printf("Generating %d flows...\n", config.num_flows);
   while (flows_set.size() != config.num_flows) {
-    printf("Generating flows %lu/%u\r", flows_set.size(), config.num_flows);
-
     auto flow = generate_random_flow();
 
     // Already generated. Unlikely, but we still check...
@@ -269,7 +270,6 @@ static std::vector<std::vector<flow_t>> generate_unique_flows_per_worker() {
       worker_idx = (worker_idx + 1) % config.tx.num_cores;
     }
   }
-  printf("Generating flows %lu/%u\n", flows_set.size(), config.num_flows);
 
   return flows;
 }
