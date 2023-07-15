@@ -454,6 +454,22 @@ static int tx_worker_main(void* arg) {
   return 0;
 }
 
+static void wait_port_up(uint16_t port_id) {
+  struct rte_eth_link link;
+  link.link_status = RTE_ETH_LINK_DOWN;
+
+  printf("Waiting for port %u...\n", port_id);
+
+  while (link.link_status == RTE_ETH_LINK_DOWN) {
+    int retval = rte_eth_link_get(port_id, &link);
+    if (retval != 0) {
+      rte_exit(EXIT_FAILURE, "Error getting port status (port %u) info: %s\n",
+               port_id, strerror(-retval));
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+}
+
 int main(int argc, char* argv[]) {
   quit = false;
 
@@ -511,6 +527,9 @@ int main(int argc, char* argv[]) {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
   }
+
+  wait_port_up(config.rx.port);
+  wait_port_up(config.tx.port);
 
   cmdline_start();
 
