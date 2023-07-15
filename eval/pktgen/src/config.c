@@ -136,12 +136,9 @@ void config_init(int argc, char **argv) {
       case CMD_OPT_TOTAL_FLOWS_NUM: {
         config.num_flows = parse_int(optarg, CMD_OPT_TOTAL_FLOWS, 10);
 
-        uint16_t flow_mask = config.num_flows - 1;
-        PARSER_ASSERT(config.num_flows >= MIN_FLOWS_NUM &&
-                          (config.num_flows & flow_mask) == 0,
+        PARSER_ASSERT(config.num_flows >= MIN_FLOWS_NUM,
                       "Number of flows must be >= %" PRIu32
-                      " and a power of 2 (requested "
-                      "%" PRIu16 ").\n",
+                      " (requested %" PRIu16 ").\n",
                       MIN_FLOWS_NUM, config.num_flows);
       } break;
       case CMD_OPT_CRC_UNIQUE_FLOWS_NUM: {
