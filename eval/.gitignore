@@ -11,3 +11,6 @@ build
 
 # Should not commit the setup config file.
 experiment_config.toml
+
+# Plotting creates tex documents
+*.tex

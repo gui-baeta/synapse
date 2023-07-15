@@ -1,56 +1,57 @@
 #!/usr/bin/env python3
 
-import itertools
+import time
 
 from util.experiment import Experiment
-from util.hosts import Controller
-
-from netexp.pktgen.dpdk import DpdkPktgen
+from util.hosts.controller import Controller
+from util.hosts.switch import Switch
+from util.hosts.pktgen import Pktgen
 
 from pathlib import Path
-from collections import defaultdict
-from typing import Any
 
 from rich.console import Console
 from rich.progress import Progress
 
-DEFAULT_PRECISION = 100_000_000  # in bps (100 Mbps).
+DEFAULT_MAX_THROUGHPUT          = 100_000 # 100 Gbps
+DEFAULT_THROUGHPUT_SEARCH_STEPS = 10
+DEFAULT_DURATION                = 5       # Seconds
+DEFAULT_MAX_ACCEPTABLE_LOSS     = 0.001   # 0.1%
+DEFAULT_WARMUP_TIME             = 5       # 5 seconds
+DEFAULT_WARMUP_RATE             = 1       # 1 Mbps
+DEFAULT_REST_TIME               = 2       # 2 seconds
 
-class ThroughputExperiment(Experiment):
+class Throughput(Experiment):
     def __init__(
         self,
         name: str,
         iterations: int,
         save_name: Path,
-        dut: Controller,
-        pktgen: DpdkPktgen,
-        pcaps: list[Path],
-        dut_configs: list[dict[str, Any]],
-        const_configs: dict[str, Any] = {},
-        precision: int = DEFAULT_PRECISION,
+        switch: Switch,
+        controller: Controller,
+        pktgen: Pktgen,
+        max_throughput_mbps: int = DEFAULT_MAX_THROUGHPUT,
+        target_duration: int = DEFAULT_DURATION,
+        throughput_search_steps: int = DEFAULT_THROUGHPUT_SEARCH_STEPS,
+        max_loss: float = DEFAULT_MAX_ACCEPTABLE_LOSS,
         console: Console = Console()
     ) -> None:
         super().__init__(name, iterations)
         self.save_name = save_name
-        self.dut = dut
+        self.switch = switch
+        self.controller = controller
         self.pktgen = pktgen
-        self.pcaps = pcaps
-        self.dut_configs = dut_configs
-        self.precision = precision
+        self.max_throughput_mbps = max_throughput_mbps
+        self.target_duration = target_duration
+        self.throughput_search_steps = throughput_search_steps
+        self.max_loss = max_loss
         self.console = console
-        self.const_configs = const_configs
 
-        config_header = self.dut.get_config_header()
+        self._sync()
 
-        if len(const_configs.keys()):
-            const_configs_header = ",".join(const_configs.keys())
-            const_configs_header += ","
-        else:
-            const_configs_header = ""
+    def _sync(self):
+        header = f"throughput (bps),throughput (pps)\n"
 
-        header = f"{const_configs_header}pcaps,{config_header},throughput (bps),throughput (pps)\n"
-
-        self.experiment_tracker = defaultdict(int)
+        self.experiment_tracker = 0
 
         # If file exists, continue where we left off.
         if self.save_name.exists():
@@ -70,47 +71,129 @@ class ThroughputExperiment(Experiment):
         else:
             with open(self.save_name, "w") as f:
                 f.write(header)
+    
+    def _find_stable_throughput(
+        self,
+        churn: int = 0,
+        steps: int = DEFAULT_THROUGHPUT_SEARCH_STEPS,
+        max_rate: int = DEFAULT_MAX_THROUGHPUT,
+    ) -> tuple[int,int]:
+        log_file = self.pktgen.log_file
+        pkt_size = self.pktgen.pkt_size
         
+        if not (0 <= self.max_loss < 1):
+            raise ValueError("max_loss must be in [0, 1).")
+
+        rate_lower = 0         # Lower bound.
+        rate_upper = max_rate  # Upper bound.
+
+        real_throughput_bps_winner = 0
+        real_throughput_pps_winner = 0
+
+        current_rate = rate_upper
+
+        # Setting the churn value
+        self.pktgen.set_churn(churn)
+
+        # We iteratively refine the bounds until the difference between them is
+        # less than the specified precision.
+        for i in range(steps):
+            if log_file:
+                log_file.write(f"Trying rate {current_rate:,} Mbps ({i+1}/{steps})\n")
+
+            nb_tx_pkts = 0
+            nb_rx_pkts = 0
+
+            while nb_tx_pkts == 0:
+                self.pktgen.reset_stats()
+                
+                # Warming up first to fill up the tables.
+                self.pktgen.set_rate(DEFAULT_WARMUP_RATE)
+                self.pktgen.start()
+                time.sleep(DEFAULT_WARMUP_TIME)
+
+                # Now we run the bench at the correct rate.
+                self.pktgen.set_rate(current_rate)
+                self.pktgen.reset_stats()
+                time.sleep(self.target_duration)
+                self.pktgen.stop()
+
+                # Let the flows expire.
+                time.sleep(DEFAULT_REST_TIME)
+
+                nb_tx_pkts, nb_rx_pkts = self.pktgen.get_stats()
+
+                if nb_tx_pkts == 0 or nb_rx_pkts == 0:
+                    log_file.write(f"No packets flowing, repeating run\n")
+
+            nb_tx_bits = nb_tx_pkts * (pkt_size + 20) * 8
+            nb_rx_bits = nb_rx_pkts * (pkt_size + 20) * 8
+
+            real_throughput_tx_bps = int(nb_tx_bits / self.target_duration)
+            real_throughput_tx_pps = int(nb_tx_pkts / self.target_duration)
+
+            real_throughput_rx_bps = int(nb_rx_bits / self.target_duration)
+            real_throughput_rx_pps = int(nb_rx_pkts / self.target_duration)
+
+            loss = 1 - nb_rx_pkts / nb_tx_pkts
+
+            if log_file:
+                tx_Gbps = real_throughput_tx_bps / 1e9
+                tx_Mpps = real_throughput_tx_pps / 1e6
+
+                rx_Gbps = real_throughput_rx_bps / 1e9
+                rx_Mpps = real_throughput_rx_pps / 1e6
+
+                log_file.write(f"TX {tx_Mpps:.2f} Mpps {tx_Gbps:.2f} Gbps\n")
+                log_file.write(f"RX {rx_Mpps:.2f} Mpps {rx_Gbps:.2f} Gbps\n")
+                log_file.write(f"Lost {loss*100:.2f}% of packets\n")
+                log_file.flush()
+
+            if loss > self.max_loss:
+                rate_upper = current_rate
+            else:
+                if current_rate == rate_upper:
+                    return real_throughput_tx_bps, real_throughput_tx_pps
+
+                rate_lower = current_rate
+
+                real_throughput_bps_winner = real_throughput_tx_bps
+                real_throughput_pps_winner = real_throughput_tx_pps
+
+            current_rate = int((rate_upper + rate_lower) / 2)
+
+        # Found a rate.
+        return real_throughput_bps_winner, real_throughput_pps_winner
+
     def run(self, step_progress: Progress, current_iter: int) -> None:
-        experiments = list(
-            itertools.product(
-                self.pcaps,
-                self.dut_configs,
-            )
+        self.switch.install()
+        
+        self.controller.launch()
+        self.pktgen.launch()
+
+        self.pktgen.wait_ready()
+        self.controller.wait_ready()
+
+        task_id = step_progress.add_task(self.name, total=1)
+
+        if self.experiment_tracker > current_iter:
+            self.console.log(f"[orange1]Skipping: {current_iter}")
+            step_progress.update(task_id, advance=1)
+            return
+
+        step_progress.update(task_id, description=f"({current_iter})")
+
+        throughput_bps, throughput_pps = self._find_stable_throughput(
+            churn=0,
+            steps=self.throughput_search_steps,
+            max_rate=self.max_throughput_mbps,
         )
 
-        task_id = step_progress.add_task(self.name, total=len(experiments))
+        with open(self.save_name, "a") as f:
+            f.write(f"{throughput_bps},{throughput_pps}\n")
 
-        for pcap, dut_config in experiments:
-            exp_str = ""
-            
-            if len(self.const_configs.keys()):
-                const_config_str = ",".join(str(self.const_configs[key]) for key in self.const_configs.keys())
-                exp_str += f"{const_config_str},"
-
-            config_str = self.dut.get_config_str(dut_config)
-            exp_str += f"{pcap.name},{config_str}"
-
-            if self.experiment_tracker[exp_str] > current_iter:
-                self.console.log(f"[orange1]Skipping: {exp_str}")
-                step_progress.update(task_id, advance=1)
-                continue
-
-            step_progress.update(task_id, description=f"({exp_str})")
-            
-            self.pktgen.set_pcap(str(pcap))
-
-            self.dut.start(dut_config)
-
-            throughput_bps, throughput_pps  = self.dut.zero_loss_throughput(
-                self.pktgen, precision=self.precision
-            )
-
-            self.dut.stop()
-
-            with open(self.save_name, "a") as f:
-                f.write(f"{exp_str},{throughput_bps},{throughput_pps}\n")
-
-            step_progress.update(task_id, advance=1)
-
+        step_progress.update(task_id, advance=1)
         step_progress.update(task_id, visible=False)
+
+        self.pktgen.close()
+        self.controller.stop()

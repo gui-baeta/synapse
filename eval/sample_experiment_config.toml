@@ -12,6 +12,7 @@
 #
 [hosts]
 controller = ""
+switch = ""
 pktgen = ""
 
 
@@ -20,28 +21,28 @@ pktgen = ""
 # Ensure that the user you are using to ssh into the machines has write access
 # to these directories. This user is set in the .ssh/config file (see above).
 [paths]
-controller_path = ""
-dataplane_path = ""
+controller = ""
+dataplane = ""
 sde_install = ""
 controller_build_script = ""
 dataplane_build_script = ""
-pktgen_path = ""
+pktgen = ""
 
 
 [devices.controller]
 
 
 [devices.pktgen]
-rx_dev = "0000:00:00.0"
-tx_dev = "0000:00:00.0"
+rx_dev = ""
+tx_dev = ""
 tx_line_rate = -1 # in Gbps.
 nb_tx_cores = -1
 
 [logs]
 # Log files. They will be saved in the orchestrator machine in the same
 # directory where you run the experiment.py script.
-controller_log = "controller.log"
-pktgen_log = "pktgen.log"
+controller = ""
+pktgen = ""
 
 
 [extra]

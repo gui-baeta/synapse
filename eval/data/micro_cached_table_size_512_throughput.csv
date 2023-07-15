@@ -1,5 +1,0 @@
-pcaps,timeout_ms,throughput (bps),throughput (pps)
-churn_1000fpm_64B_10000us_100Gbps.pcap,10,23251075347,48439755
-churn_10500fpm_64B_10000us_100Gbps.pcap,10,24531382304,51107046
-churn_100500fpm_64B_10000us_100Gbps.pcap,10,22401148755,46669068
-churn_1000500fpm_64B_10000us_100Gbps.pcap,10,487925792,1016512
