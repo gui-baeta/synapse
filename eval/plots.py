@@ -62,7 +62,8 @@ tight_layout_pad = 0.21
 linewidth = 0.75
 elinewidth = 0.5
 capsize = 1
-markersize = 2
+markersize = 2.5
+markeredgewidth = 0.5
 capthick = 0.5
 
 # This is "colorBlindness::PairedColor12Steps" from R.
@@ -84,7 +85,7 @@ palette = [
 
 hatch_list = ['////////', '-----', '+++++++', '|||||||']
 
-markers_list = ['.', 'o', 'v', 's']
+markers_list = ['.', 'x', 'o', 'v', 's', '*']
 
 linestyle = [
     (0, (1, 0)),
@@ -178,6 +179,9 @@ def get_data(data_dir: Path, pattern: str, keys: list[tuple[str, type]]) -> list
             for row in rows:
                 cols = [ int(c) if '.' not in c else float(c) for c in row ]
                 values.append(cols)
+            
+            # Sort data by iteration (1st column)
+            values = sorted(values, key=lambda x: x[0])
 
             file_data["labels"] = header
             file_data["values"] = values
@@ -284,6 +288,7 @@ def plot_subplot(ax,
         options = {
             "marker": marker,
             "markersize": markersize,
+            "markeredgewidth": markeredgewidth,
             "markerfacecolor": color,
             "linewidth": linewidth,
             "capsize": capsize,
@@ -310,58 +315,75 @@ def plot_subplot(ax,
 def plot_micro_cached_tables_churn(data_dir: Path,
                                    dest_dir: Path,
                                    opts: dict[str, Any]) -> None:
-    fig_name = "cached_tables_churn"
-    xlabel = "Churn (fpm)"
-    ylabel = "Throughput (Mpps)"
+    x_elem = 1 # churn column
+    x_label = "Churn (fpm)"
 
-    data_fname_pattern = r"micro_cached_tables_cached_(\d+)_churn"
+    y_bps_elem = 2 # Throughput bps column
+    y_Gbps_label = "Throughput (Gbps)"
+    y_Gbps_scaler = 1e9
+    y_Gbps_fname_label = "gbps"
+    y_Gbps_max_value = 100
+
+    y_pps_elem = 3 # Throughput pps column
+    y_Mpps_label = "Throughput (Mpps)"
+    y_Mpps_scaler = 1e6
+    y_Mpps_fname_label = "mpps"
+    y_Mpps_max_value = 150
+
+    y_cfgs = [
+        (y_bps_elem, y_Gbps_scaler, y_Gbps_label, y_Gbps_fname_label, y_Gbps_max_value),
+        (y_pps_elem, y_Mpps_scaler, y_Mpps_label, y_Mpps_fname_label, y_Mpps_max_value),
+    ]
+
     data_fname_keys = [ ("cached", int) ]
-
-    data = []
+    data_fname_pattern = r"micro_cached_tables_cached_(\d+)_churn"
 
     files_data = get_data(data_dir, data_fname_pattern, data_fname_keys)
     files_data = sorted(files_data, key=lambda x: x["config"]["cached"])
 
-    for file_data in files_data:
-        x_elem = 1 # churn column
-        y_elem = 3 # throughput (pps) column
-    
-        config = file_data["config"]
-        values = file_data["values"]
-        values = aggregate_values(values, x_elem, y_elem)
+    for y_elem, y_scaler, y_label, y_fname_label, y_max_value in y_cfgs:
+        fig_name = f"cached_tables_churn_{y_fname_label}"
 
-        assert "cached" in config.keys()
-        cached = config["cached"]
+        data = []
 
-        x    = [ v[0] for v in values ]
-        y    = [ v[1] / 1e6 for v in values ]
-        yerr = [ v[2] / 1e6 for v in values ]
+        for file_data in files_data:
+            config = file_data["config"]
+            values = file_data["values"]
 
-        data.append({
-            "label": f"{cached}\%",
-            "x": x,
-            "y": y,
-            "yerr": yerr,
-        })
+            agg_values = aggregate_values(values, x_elem, y_elem)
 
-    set_figsize = (width / 2, height / 2)
+            assert "cached" in config.keys()
+            cached = config["cached"]
 
-    fig, ax = plt.subplots()
+            x    = [ v[0] for v in agg_values ]
+            y    = [ v[1] / y_scaler for v in agg_values ]
+            yerr = [ v[2] / y_scaler for v in agg_values ]
 
-    plot_subplot(ax, xlabel, ylabel, data)
+            data.append({
+                "label": f"{cached}\%",
+                "x": x,
+                "y": y,
+                "yerr": yerr,
+            })
 
-    ax.legend(loc='lower right')
+        set_figsize = (width / 2, height / 2)
 
-    ax.set_xscale("symlog")
-    ax.set_ylim(0, 150)
+        fig, ax = plt.subplots()
 
-    fig.set_size_inches(*set_figsize)
-    fig.tight_layout(pad=0.1)
+        plot_subplot(ax, x_label, y_label, data)
 
-    plt.savefig(dest_dir / f"{fig_name}.pdf")
+        ax.legend(loc='lower right')
 
-    if opts.get("save_png", False):
-        plt.savefig(dest_dir / f"{fig_name}.png")
+        ax.set_xscale("symlog")
+        ax.set_ylim(0, y_max_value)
+
+        fig.set_size_inches(*set_figsize)
+        fig.tight_layout(pad=0.1)
+
+        plt.savefig(dest_dir / f"{fig_name}.pdf")
+
+        if opts.get("save_png", False):
+            plt.savefig(dest_dir / f"{fig_name}.png")
 
 @click.command()
 @click.argument("data_dir")

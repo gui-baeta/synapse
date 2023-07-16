@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 
-from util.throughput import Throughput
-from util.hosts.controller import Controller
-from util.hosts.switch import Switch
-from util.hosts.pktgen import Pktgen
+import math
 
 from pathlib import Path
 from collections import defaultdict
@@ -11,8 +8,14 @@ from collections import defaultdict
 from rich.console import Console
 from rich.progress import Progress
 
-DEFAULT_THROUGHPUT_MID_CHURN = 50_000 # 50 Gbps
-DEFAULT_NUM_CHURN_STEPS      = 10
+from util.throughput import Throughput
+from util.hosts.controller import Controller
+from util.hosts.switch import Switch
+from util.hosts.pktgen import Pktgen
+
+DEFAULT_MID_PERF_CHURN  = 50_000 # 50 Gbps
+DEFAULT_LOW_PERF_CHURN  = 1_000  # 1 Gbps
+DEFAULT_NUM_CHURN_STEPS = 10
 
 class Churn(Throughput):
     def __init__(
@@ -57,11 +60,14 @@ class Churn(Throughput):
             with open(self.save_name, "w") as f:
                 f.write(header)
     
-    def _find_half_perf_churn(self, max_churn: int):
-        # Let's find out the maximum churn we can handle under low rate.
+    # Finds the churn at which performance drops to half, and the one
+    # that completely plummets it.
+    def _find_churn_anchors(self, max_churn: int):
+        churn = 100
+        rate  = DEFAULT_MID_PERF_CHURN
 
-        churn = 60
-        rate  = DEFAULT_THROUGHPUT_MID_CHURN
+        mid_churn  = None
+        high_churn = None
 
         while True:
             if self.pktgen.log_file:
@@ -76,14 +82,24 @@ class Churn(Throughput):
             )
 
             # Throughput equals 0 if it wasn't stable.
-            if throughput_bps == 0 or churn == max_churn:
-                break
-            
-            churn = min(churn * 2, max_churn)
-        
-        self.pktgen.log_file.write(f"Half perf churn: {churn:,} fpm\n")
+            if throughput_bps == 0:
+                if mid_churn is None:
+                    mid_churn = churn
+                    rate      = DEFAULT_LOW_PERF_CHURN
+                else:
+                    high_churn = churn
+                    break
 
-        return churn
+            churn = min(churn * 2, max_churn)
+
+            if churn == max_churn:
+                mid_churn  = churn
+                high_churn = churn
+                break
+        
+        self.pktgen.log_file.write(f"Churn anchors: mid={mid_churn:,} fpm high={high_churn:,} fpm\n")
+
+        return mid_churn, high_churn
 
     def run(self, step_progress: Progress, current_iter: int) -> None:
         task_id = step_progress.add_task(self.name, total=self.nb_churn_steps)
@@ -105,21 +121,27 @@ class Churn(Throughput):
         max_churn = self.pktgen.wait_ready()
         self.controller.wait_ready()
 
-        churns = []
+        mid_churn  = 0
+        high_churn = 0
+        churns     = []
 
         for i in range(self.nb_churn_steps):
             if self.experiment_tracker[i] > current_iter:
-                self.console.log(f"[orange1]Skipping: iteration {i}")
+                self.console.log(f"[orange1]Skipping: iteration {i+1}")
                 step_progress.update(task_id, advance=1)
                 continue
 
             if len(churns) == 0:
-                step_progress.update(task_id, description=f"Finding half perf churn...")
+                step_progress.update(task_id, description=f"Finding churn anchors...")
 
-                half_perf_churn   = self._find_half_perf_churn(max_churn)
-                steps_bellow_half = self.nb_churn_steps * 3/4
-                churns_steps      = half_perf_churn / steps_bellow_half
-                churns            = [ int(i * churns_steps) for i in range(self.nb_churn_steps) ]
+                mid_churn, high_churn = self._find_churn_anchors(max_churn)
+                mid_steps             = math.floor(self.nb_churn_steps * 3/4)
+                high_steps            = self.nb_churn_steps - mid_steps
+                mid_churns_steps      = int(mid_churn / mid_steps)
+                high_churns_steps     = int((high_churn - mid_churn) / high_steps)
+                mid_churns            = [ int(i * mid_churns_steps) for i in range(mid_steps) ]
+                high_churns           = [ int(mid_churn + i * high_churns_steps) for i in range(1, high_steps + 1) ]
+                churns                = mid_churns + high_churns
 
             churn = churns[i]
 
@@ -128,7 +150,7 @@ class Churn(Throughput):
 
             step_progress.update(
                 task_id,
-                description=f"{churn:,} fpm (half perf churn {half_perf_churn:,} fpm) ({i+1}/{len(churns)})"
+                description=f"[{i+1:2d}/{len(churns):2d}] {churn:,} fpm (anchors={{{mid_churn:,}|{high_churn:,}}} fpm)"
             )
 
             throughput_bps, throughput_pps = self._find_stable_throughput(
