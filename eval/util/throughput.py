@@ -95,6 +95,9 @@ class Throughput(Experiment):
         # Setting the churn value
         self.pktgen.set_churn(churn)
 
+        # Setting warmup duration
+        self.pktgen.set_warmup_duration(DEFAULT_WARMUP_TIME)
+
         # We iteratively refine the bounds until the difference between them is
         # less than the specified precision.
         for i in range(steps):
@@ -106,19 +109,12 @@ class Throughput(Experiment):
 
             while nb_tx_pkts == 0:
                 self.pktgen.reset_stats()
-                
-                # Warming up first to fill up the tables.
-                # self.pktgen.set_rate(DEFAULT_WARMUP_RATE)
-                # self.pktgen.start()
-                # time.sleep(DEFAULT_WARMUP_TIME)
-
-                # Now we run the bench at the correct rate.
-                self.pktgen.reset_stats()
                 self.pktgen.set_rate(current_rate)
-                self.pktgen.start()
-                time.sleep(self.target_duration)
-                self.pktgen.stop()
-
+                
+                # Run pktgen with warmup
+                self.pktgen.run(self.target_duration)
+                self.pktgen.wait_ready()
+                
                 # Let the flows expire.
                 time.sleep(DEFAULT_REST_TIME)
 
@@ -173,7 +169,7 @@ class Throughput(Experiment):
         self.controller.launch()
         self.pktgen.launch()
 
-        self.pktgen.wait_ready()
+        self.pktgen.wait_launch()
         self.controller.wait_ready()
 
         task_id = step_progress.add_task(self.name, total=1)

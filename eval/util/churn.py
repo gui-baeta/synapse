@@ -122,7 +122,7 @@ class Churn(Throughput):
         self.controller.launch()
         self.pktgen.launch()
 
-        max_churn = self.pktgen.wait_ready()
+        max_churn = self.pktgen.wait_launch()
         self.controller.wait_ready()
 
         for i in range(self.nb_churn_steps):

@@ -86,19 +86,12 @@ class Pktgen():
         self.remote_cmd = remote_cmd
         self.target_pkt_tx = 0
     
-    def wait_ready(self) -> int:
+    def wait_launch(self) -> int:
         assert self.pktgen_active
 
-        # Wait to see if we actually managed to run pktgen successfuly.
-        # Typically we fail here if we forgot to bind ports to DPDK,
-        # or allocate hugepages.
-        if self.pktgen.exit_status_ready() and self.pktgen.recv_exit_status() != 0:
-            self.pktgen_active = False
-            raise Exception("Cannot run pktgen")
-        
-        output = self.pktgen.watch(stop_pattern="\r\nPktgen>")
-        self.ready = True
+        output = self.wait_ready()
 
+        self.ready = True
         lines = output.split("\r\n")
         
         while lines:
@@ -116,14 +109,42 @@ class Pktgen():
             return max_churn
 
         raise Exception("Unable to retrieve max churn data from output")
+    
+    def wait_ready(self) -> str:
+        assert self.pktgen_active
+
+        # Wait to see if we actually managed to run pktgen successfuly.
+        # Typically we fail here if we forgot to bind ports to DPDK,
+        # or allocate hugepages.
+        if self.pktgen.exit_status_ready() and self.pktgen.recv_exit_status() != 0:
+            self.pktgen_active = False
+            raise Exception("Cannot run pktgen")
+        
+        return self.pktgen.watch(stop_pattern="Pktgen>")
 
     def start(self) -> None:
         assert self.pktgen_active
 
         if not self.ready:
-            self.wait_ready()
+            self.wait_launch()
 
         self.__run_commands("start")
+    
+    def set_warmup_duration(self, duration_sec: int) -> None:
+        assert self.pktgen_active
+
+        if not self.ready:
+            self.wait_launch()
+        
+        self.__run_commands(f"warmup {duration_sec}")
+    
+    def run(self, duration_sec: int) -> None:
+        assert self.pktgen_active
+
+        if not self.ready:
+            self.wait_launch()
+
+        self.__run_commands(f"run {duration_sec}")
     
     def set_rate(self, rate_mbps: int) -> None:
         assert rate_mbps > 0
