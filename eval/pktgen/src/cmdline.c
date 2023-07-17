@@ -51,6 +51,8 @@ cmdline_parse_token_string_t cmd_rate_token_cmd =
     TOKEN_STRING_INITIALIZER(struct cmd_int_params, cmd, "rate");
 cmdline_parse_token_string_t cmd_churn_token_cmd =
     TOKEN_STRING_INITIALIZER(struct cmd_int_params, cmd, "churn");
+cmdline_parse_token_string_t cmd_timer_token_cmd =
+    TOKEN_STRING_INITIALIZER(struct cmd_int_params, cmd, "timer");
 cmdline_parse_token_num_t cmd_int_token_param =
     TOKEN_NUM_INITIALIZER(struct cmd_int_params, param, RTE_UINT32);
 
@@ -89,6 +91,11 @@ void cmd_churn(churn_fpm_t churn) {
   signal_new_config();
 }
 
+void cmd_timer(timer_s_t time) {
+  config.runtime.timer = time;
+  signal_new_config();
+}
+
 static void cmd_quit_callback(__rte_unused void *ptr_params,
                               struct cmdline *ctx,
                               __rte_unused void *ptr_data) {
@@ -110,7 +117,7 @@ static void cmd_stop_callback(__rte_unused void *ptr_params,
 static void cmd_stats_callback(__rte_unused void *ptr_params,
                                __rte_unused struct cmdline *ctx,
                                __rte_unused void *ptr_data) {
-  cmd_stats_display();
+  cmd_stats_display_compact();
 }
 
 static void cmd_stats_reset_callback(__rte_unused void *ptr_params,
@@ -133,6 +140,14 @@ static void cmd_churn_callback(__rte_unused void *ptr_params,
   struct cmd_int_params *params = ptr_params;
   churn_fpm_t churn = (double)params->param;
   cmd_churn(churn);
+}
+
+static void cmd_timer_callback(__rte_unused void *ptr_params,
+                               __rte_unused struct cmdline *ctx,
+                               __rte_unused void *ptr_data) {
+  struct cmd_int_params *params = ptr_params;
+  time_s_t time = (double)params->param;
+  cmd_timer(time);
 }
 
 CMDLINE_PARSE_INT_NTOKENS(1)
@@ -192,6 +207,15 @@ cmd_churn_cmd = {
                NULL},
 };
 
+CMDLINE_PARSE_INT_NTOKENS(2)
+cmd_timer_cmd = {
+    .f = cmd_timer_callback,
+    .data = NULL,
+    .help_str = "timer <time>\n     Set tx timer in seconds",
+    .tokens = {(void *)&cmd_timer_token_cmd, (void *)&cmd_int_token_param,
+               NULL},
+};
+
 cmdline_parse_ctx_t list_prompt_commands[] = {
     (cmdline_parse_inst_t *)&cmd_quit_cmd,
     (cmdline_parse_inst_t *)&cmd_start_cmd,
@@ -200,6 +224,7 @@ cmdline_parse_ctx_t list_prompt_commands[] = {
     (cmdline_parse_inst_t *)&cmd_stats_reset_cmd,
     (cmdline_parse_inst_t *)&cmd_rate_cmd,
     (cmdline_parse_inst_t *)&cmd_churn_cmd,
+    (cmdline_parse_inst_t *)&cmd_timer_cmd,
     NULL,
 };
 

@@ -370,6 +370,7 @@ static int tx_worker_main(void* arg) {
   uint64_t num_total_tx = 0;
 
   ticks_t flow_ticks = worker_config->runtime->flow_ttl * clock_scale() / 1000;
+  ticks_t timer = TIMER_INFINITE;
 
   auto queue_id = worker_config->queue_id;
 
@@ -382,7 +383,11 @@ static int tx_worker_main(void* arg) {
 
   // Run until the application is killed
   while (likely(!quit)) {
-    if (unlikely(worker_config->runtime->update_cnt > last_update_cnt)) {
+    // TODO: take the timer into consideration, and stop transmiting if we go
+    // over the deadline.
+    bool overtime = (timer != TIMER_INFINITE);
+    if (unlikely(worker_config->runtime->update_cnt > last_update_cnt ||
+                 overtime)) {
       elapsed_ticks += TscClock::now() - first_tick;
       wait_to_start();
 
@@ -418,10 +423,10 @@ static int tx_worker_main(void* arg) {
       uint32_t flow_idx = (mbuf_burst_offset + i) % num_base_flows;
 
       auto& chosen_flows_idx = chosen_flows_idxs[flow_idx];
-      auto& timer = flows_timers[flow_idx];
+      auto& flow_timer = flows_timers[flow_idx];
 
-      if (period_start_tick >= timer) {
-        timer += flow_ticks;
+      if (period_start_tick >= flow_timer) {
+        flow_timer += flow_ticks;
         chosen_flows_idx = (chosen_flows_idx + 1) % 2;
       }
 
@@ -468,6 +473,59 @@ static void wait_port_up(uint16_t port_id) {
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
+}
+
+static void test() {
+  // time_s_t warmup_duration = 5;
+  // rate_mbps_t warmup_rate = 1;
+  // churn_fpm_t warmup_churn = 0;
+
+  time_s_t duration = 5;
+  rate_mbps_t rate = 100 * 1000;
+  churn_fpm_t churn = 0;
+
+  cmd_timer(duration);
+
+  // printf("Warming up...\n");
+  // cmd_rate(warmup_rate);
+  // cmd_churn(warmup_churn);
+
+  // cmd_start();
+  // std::this_thread::sleep_for(std::chrono::seconds(warmup_duration));
+
+  printf("Trying %.2lf Mbps rate churn %lu fpm...\n", rate, churn);
+  cmd_rate(rate / 1e3);
+  cmd_churn(churn);
+
+  cmd_stats_reset();
+
+  cmd_start();
+  std::this_thread::sleep_for(std::chrono::seconds(duration + 1));
+  cmd_stop();
+
+  stats_t stats = get_stats();
+
+  float loss = (float)(stats.tx_pkts - stats.rx_pkts) / stats.tx_pkts;
+
+  // Acount for the warmup phase
+  // uint64_t warmup_pkts =
+  //     (warmup_rate * 1e6 * warmup_duration) / (config.pkt_size + 20) * 8;
+  // printf("  TX:   %" PRIu64 "\n", stats.tx_pkts);
+  // stats.tx_pkts -= warmup_pkts;
+  // printf("warmup tx %lu\n", warmup_pkts);
+
+  bits_t tx_bits = (config.pkt_size + 20) * 8 * stats.tx_pkts;
+
+  rate_mpps_t mpps = stats.tx_pkts / (duration * 1e6);
+  rate_gbps_t gbps = tx_bits / (duration * 1e9);
+
+  printf("\n");
+  printf("~~~~~~ Pktgen ~~~~~~\n");
+  printf("  TX:   %" PRIu64 "\n", stats.tx_pkts);
+  printf("  RX:   %" PRIu64 "\n", stats.rx_pkts);
+  printf("  Loss: %.2lf\n", 100 * loss);
+  printf("  Mpps: %.2lf\n", mpps);
+  printf("  Gbps: %.2lf\n", gbps);
 }
 
 int main(int argc, char* argv[]) {
@@ -531,31 +589,13 @@ int main(int argc, char* argv[]) {
   wait_port_up(config.rx.port);
   wait_port_up(config.tx.port);
 
-  cmdline_start();
-
-  // rate_mbps_t rate = 10 * 1000;
-  // churn_fpm_t churn = 100000;
-
-  // rate_mbps_t warmup_rate = 1;
-  // churn_fpm_t warmup_churn = 0;
-
-  // printf("Warming up...\n");
-
-  // cmd_rate(warmup_rate);
-  // cmd_churn(warmup_churn);
-  // cmd_start();
-  // std::this_thread::sleep_for(std::chrono::seconds(3));
-
-  // printf("Trying %.2lf Mbps rate churn %lu fpm...\n", rate, churn);
-  // cmd_rate(rate / 1e3);
-  // cmd_churn(churn);
-  // cmd_stats_reset();
-
-  // std::this_thread::sleep_for(std::chrono::seconds(10));
-  // cmd_stop();
+  if (config.test_and_exit) {
+    test();
+  } else {
+    cmdline_start();
+  }
 
   quit = true;
-
   printf("Waiting for workers to finish...\n");
 
   // Wait for all processes to complete

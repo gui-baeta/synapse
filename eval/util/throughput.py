@@ -99,7 +99,7 @@ class Throughput(Experiment):
         # less than the specified precision.
         for i in range(steps):
             if log_file:
-                log_file.write(f"Trying rate {current_rate:,} Mbps ({i+1}/{steps})\n")
+                log_file.write(f"[{i+1}/{steps}] Trying rate {current_rate:,} Mbps\n")
 
             nb_tx_pkts = 0
             nb_rx_pkts = 0
@@ -108,13 +108,14 @@ class Throughput(Experiment):
                 self.pktgen.reset_stats()
                 
                 # Warming up first to fill up the tables.
-                self.pktgen.set_rate(DEFAULT_WARMUP_RATE)
-                self.pktgen.start()
-                time.sleep(DEFAULT_WARMUP_TIME)
+                # self.pktgen.set_rate(DEFAULT_WARMUP_RATE)
+                # self.pktgen.start()
+                # time.sleep(DEFAULT_WARMUP_TIME)
 
                 # Now we run the bench at the correct rate.
-                self.pktgen.set_rate(current_rate)
                 self.pktgen.reset_stats()
+                self.pktgen.set_rate(current_rate)
+                self.pktgen.start()
                 time.sleep(self.target_duration)
                 self.pktgen.stop()
 
@@ -144,6 +145,7 @@ class Throughput(Experiment):
                 rx_Gbps = real_throughput_rx_bps / 1e9
                 rx_Mpps = real_throughput_rx_pps / 1e6
 
+                log_file.write("\n")
                 log_file.write(f"TX {tx_Mpps:.2f} Mpps {tx_Gbps:.2f} Gbps\n")
                 log_file.write(f"RX {rx_Mpps:.2f} Mpps {rx_Gbps:.2f} Gbps\n")
                 log_file.write(f"Lost {loss*100:.2f}% of packets\n")

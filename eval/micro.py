@@ -32,10 +32,9 @@ def get_closest_power_of_two(value):
 
     return (1 << p) if delta_lo < delta_hi else (1 << (p + 1))
 
-def get_cached_tables_churn_experiments(config: list, data_dir: Path) -> list[Experiment]:
+def get_cached_tables_churn_experiments(config: list, data_dir: Path, iters: int) -> list[Experiment]:
     experiments = []
 
-    iterations         = 1
     cache_size         = 1024
     pkt_size           = 64
     expiration_time_ms = 10
@@ -90,7 +89,7 @@ def get_cached_tables_churn_experiments(config: list, data_dir: Path) -> list[Ex
 
         churn = Churn(
             name=exp_name,
-            iterations=iterations,
+            iterations=iters,
             save_name=data_dir / Path(data_fname),
             switch=switch,
             controller=controller,
@@ -102,9 +101,9 @@ def get_cached_tables_churn_experiments(config: list, data_dir: Path) -> list[Ex
 
     return experiments
 
-def get_micro_experiments(config: dict, data_dir: Path) -> list[Experiment]:
+def get_micro_experiments(config: dict, data_dir: Path, iters: int) -> list[Experiment]:
     experiments = []
-    experiments += get_cached_tables_churn_experiments(config, data_dir)
+    experiments += get_cached_tables_churn_experiments(config, data_dir, iters)
     return experiments
 
 @click.command()
@@ -114,6 +113,14 @@ def get_micro_experiments(config: dict, data_dir: Path) -> list[Experiment]:
     "-f",
     multiple=True,
     help="Filter experiments by name. Multiple filters are treated as OR.",
+)
+@click.option(
+    "--iters",
+    "-i",
+    type=int,
+    default=1,
+    show_default=True,
+    help="Number of iterations to run each experiment.",
 )
 @click.option(
     "--config-file",
@@ -126,6 +133,7 @@ def get_micro_experiments(config: dict, data_dir: Path) -> list[Experiment]:
 def main(
     data_dir,
     filter,
+    iters,
     config_file,
 ):
     data_dir = Path(data_dir)
@@ -134,7 +142,7 @@ def main(
     with open(config_file, "rb") as f:
         config = tomli.load(f)
     
-    experiments = get_micro_experiments(config, data_dir)
+    experiments = get_micro_experiments(config, data_dir, iters)
     exp_tracker = ExperimentTracker()
 
     for exp in experiments:

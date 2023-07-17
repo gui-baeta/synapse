@@ -19,6 +19,7 @@ extern "C" {
 #define NUM_SAMPLE_PACKETS (2 * DESC_RING_SIZE)
 
 #define MIN_FLOWS_NUM 2
+#define TIMER_INFINITE 0
 
 // To induce churn, flows are changed from time to time, alternating between an
 // old and a new value. Naturally, alternating between these flows so fast that
@@ -40,6 +41,7 @@ typedef uint64_t bytes_t;
 typedef uint8_t bit_t;
 typedef uint8_t byte_t;
 
+typedef uint64_t time_s_t;
 typedef uint64_t time_us_t;
 typedef uint64_t time_ns_t;
 
@@ -68,6 +70,7 @@ struct runtime_config_t {
   bool running;
   uint64_t update_cnt;
   churn_fps_t churn;
+  timer_s_t timer;
 
   // Information for each TX worker
   rate_gbps_t rate_per_core;
@@ -75,6 +78,8 @@ struct runtime_config_t {
 };
 
 struct config_t {
+  bool test_and_exit;
+
   uint16_t num_flows;
   bool crc_unique_flows;
   uint32_t crc_bits;
@@ -105,12 +110,20 @@ void config_print_usage(char **argv);
 
 void cmdline_start();
 void cmd_stats_display();
+void cmd_stats_display_compact();
 void cmd_stats_reset();
 void cmd_start();
 void cmd_stop();
 void cmd_rate(rate_gbps_t rate);
 void cmd_churn(churn_fpm_t churn);
+void cmd_timer(time_s_t time);
 
+struct stats_t {
+  uint64_t rx_pkts;
+  uint64_t tx_pkts;
+};
+
+struct stats_t get_stats();
 crc32_t calculate_crc32(byte_t *data, int len);
 
 #ifdef __cplusplus

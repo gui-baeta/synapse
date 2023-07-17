@@ -46,6 +46,7 @@ class Churn(Throughput):
         header = f"iteration,churn (fpm),throughput (bps),throughput (pps)\n"
 
         self.experiment_tracker = defaultdict(int)
+        self.churns = defaultdict(int)
 
         # If file exists, continue where we left off.
         if self.save_name.exists():
@@ -55,7 +56,10 @@ class Churn(Throughput):
                 for row in f.readlines():
                     cols = row.split(",")
                     it = int(cols[0])
+                    churn = int(cols[1])
                     self.experiment_tracker[it] += 1
+                    self.churns[it] = churn
+
         else:
             with open(self.save_name, "w") as f:
                 f.write(header)
@@ -121,17 +125,13 @@ class Churn(Throughput):
         max_churn = self.pktgen.wait_ready()
         self.controller.wait_ready()
 
-        mid_churn  = 0
-        high_churn = 0
-        churns     = []
-
         for i in range(self.nb_churn_steps):
             if self.experiment_tracker[i] > current_iter:
                 self.console.log(f"[orange1]Skipping: iteration {i+1}")
                 step_progress.update(task_id, advance=1)
                 continue
 
-            if len(churns) == 0:
+            if len(self.churns) != self.nb_churn_steps:
                 step_progress.update(task_id, description=f"Finding churn anchors...")
 
                 mid_churn, high_churn = self._find_churn_anchors(max_churn)
@@ -141,16 +141,16 @@ class Churn(Throughput):
                 high_churns_steps     = int((high_churn - mid_churn) / high_steps)
                 mid_churns            = [ int(i * mid_churns_steps) for i in range(mid_steps) ]
                 high_churns           = [ int(mid_churn + i * high_churns_steps) for i in range(1, high_steps + 1) ]
-                churns                = mid_churns + high_churns
+                self.churns           = mid_churns + high_churns
 
-            churn = churns[i]
+            churn = self.churns[i]
 
             if self.pktgen.log_file:
                 self.pktgen.log_file.write(f"Trying churn {churn:,}\n")
 
             step_progress.update(
                 task_id,
-                description=f"[{i+1:2d}/{len(churns):2d}] {churn:,} fpm (anchors={{{mid_churn:,}|{high_churn:,}}} fpm)"
+                description=f"[{i+1:2d}/{len(self.churns):2d}] {churn:,} fpm"
             )
 
             throughput_bps, throughput_pps = self._find_stable_throughput(

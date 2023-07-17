@@ -8,6 +8,7 @@
 #include "pktgen.h"
 
 #define CMD_OPT_HELP "help"
+#define CMD_OPT_TEST "test"
 #define CMD_OPT_TOTAL_FLOWS "total-flows"
 #define CMD_OPT_PKT_SIZE "pkt-size"
 #define CMD_OPT_TX_PORT "tx"
@@ -26,6 +27,7 @@ enum {
    * be >= 256, so that it does not conflict with short options.
    */
   CMD_OPT_HELP_NUM = 256,
+  CMD_OPT_TEST_NUM,
   CMD_OPT_TOTAL_FLOWS_NUM,
   CMD_OPT_PKT_SIZE_NUM,
   CMD_OPT_TX_PORT_NUM,
@@ -41,6 +43,7 @@ static const char short_options[] = "";
 
 static const struct option long_options[] = {
     {CMD_OPT_HELP, no_argument, NULL, CMD_OPT_HELP_NUM},
+    {CMD_OPT_TEST, no_argument, NULL, CMD_OPT_TEST_NUM},
     {CMD_OPT_TOTAL_FLOWS, required_argument, NULL, CMD_OPT_TOTAL_FLOWS_NUM},
     {CMD_OPT_PKT_SIZE, required_argument, NULL, CMD_OPT_PKT_SIZE_NUM},
     {CMD_OPT_TX_PORT, required_argument, NULL, CMD_OPT_TX_PORT_NUM},
@@ -56,6 +59,7 @@ void config_print_usage(char **argv) {
       "Usage:\n"
       "%s [EAL options] --\n"
       "\t[--help]: Show this help and exit\n"
+      "\t[--test]: Run test and exit\n"
       "\t --" CMD_OPT_TOTAL_FLOWS
       " <#flows>: Total number of flows\n"
       "\t --" CMD_OPT_PKT_SIZE " <size>: Packet size (bytes) (default=%" PRIu64
@@ -92,6 +96,7 @@ static uintmax_t parse_int(const char *str, const char *name, int base) {
 
 void config_init(int argc, char **argv) {
   // Default configuration values
+  config.test_and_exit = false;
   config.num_flows = 0;
   config.crc_unique_flows = DEFAULT_CRC_UNIQUE_FLOWS;
   config.crc_bits = DEFAULT_CRC_BITS;
@@ -105,6 +110,7 @@ void config_init(int argc, char **argv) {
   config.runtime.running = false;
   config.runtime.update_cnt = 0;
   config.runtime.churn = 0;
+  config.runtime.timer = TIMER_INFINITE;
   config.runtime.rate_per_core = 0;
   config.runtime.flow_ttl = 0;
 
@@ -132,6 +138,9 @@ void config_init(int argc, char **argv) {
       case CMD_OPT_HELP_NUM: {
         config_print_usage(argv);
         exit(0);
+      } break;
+      case CMD_OPT_TEST_NUM: {
+        config.test_and_exit = true;
       } break;
       case CMD_OPT_TOTAL_FLOWS_NUM: {
         config.num_flows = parse_int(optarg, CMD_OPT_TOTAL_FLOWS, 10);
