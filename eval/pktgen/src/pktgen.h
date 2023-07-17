@@ -19,7 +19,6 @@ extern "C" {
 #define NUM_SAMPLE_PACKETS (2 * DESC_RING_SIZE)
 
 #define MIN_FLOWS_NUM 2
-#define TIMER_INFINITE 0
 
 // To induce churn, flows are changed from time to time, alternating between an
 // old and a new value. Naturally, alternating between these flows so fast that
@@ -32,20 +31,19 @@ extern "C" {
 typedef uint64_t bits_t;
 typedef uint64_t bytes_t;
 
+typedef uint8_t bit_t;
+typedef uint8_t byte_t;
+
 #define MIN_PKT_SIZE ((bytes_t)64)    // With CRC
 #define MAX_PKT_SIZE ((bytes_t)1518)  // With CRC
 
 #define MIN_CRC_BITS 1
 #define MAX_CRC_BITS 32
 
-typedef uint8_t bit_t;
-typedef uint8_t byte_t;
-
 typedef uint64_t time_s_t;
+typedef uint64_t time_ms_t;
 typedef uint64_t time_us_t;
 typedef uint64_t time_ns_t;
-
-typedef uint64_t ticks_t;
 
 #define NS_TO_S(T) (((double)(T)) / 1e9)
 
@@ -70,7 +68,6 @@ struct runtime_config_t {
   bool running;
   uint64_t update_cnt;
   churn_fps_t churn;
-  timer_s_t timer;
 
   // Information for each TX worker
   rate_gbps_t rate_per_core;
@@ -85,6 +82,9 @@ struct config_t {
   uint32_t crc_bits;
   time_ns_t exp_time;
   bytes_t pkt_size;
+
+  time_s_t warmup_duration;
+  rate_mbps_t warmup_rate;
 
   churn_fpm_t max_churn;
   rate_gbps_t rate;

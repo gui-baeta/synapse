@@ -22,6 +22,9 @@
 #define DEFAULT_CRC_UNIQUE_FLOWS false
 #define DEFAULT_CRC_BITS 32
 
+#define DEFAULT_WARMUP_DURATION 5 // no warmup
+#define DEFAULT_WARMUP_RATE 1 // 1 Mbps
+
 enum {
   /* long options mapped to short options: first long only option value must
    * be >= 256, so that it does not conflict with short options.
@@ -102,6 +105,8 @@ void config_init(int argc, char **argv) {
   config.crc_bits = DEFAULT_CRC_BITS;
   config.exp_time = 0;
   config.pkt_size = DEFAULT_PKT_SIZE;
+  config.warmup_duration = DEFAULT_WARMUP_DURATION;
+  config.warmup_rate = DEFAULT_WARMUP_RATE;
   config.rx.port = 0;
   config.tx.port = 0;
   config.tx.num_cores = 0;
@@ -110,7 +115,6 @@ void config_init(int argc, char **argv) {
   config.runtime.running = false;
   config.runtime.update_cnt = 0;
   config.runtime.churn = 0;
-  config.runtime.timer = TIMER_INFINITE;
   config.runtime.rate_per_core = 0;
   config.runtime.flow_ttl = 0;
 

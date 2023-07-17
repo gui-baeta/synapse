@@ -22,7 +22,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "tsc_clock.h"
+#include "clock.h"
 
 // Source/destination MACs
 struct rte_ether_addr src_mac = {{0xb4, 0x96, 0x91, 0xa4, 0x02, 0xe9}};
@@ -163,7 +163,7 @@ void wait_to_start() {
       break;
     }
     while ((config.runtime.update_cnt == last_cnt) && !quit) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      sleep_ms(100);
     }
     last_cnt = config.runtime.update_cnt;
   }
@@ -360,8 +360,8 @@ static int tx_worker_main(void* arg) {
 
   // Rate control
   ticks_t period_end_tick;
-  ticks_t first_tick = TscClock::now();
-  ticks_t period_start_tick = TscClock::now();
+  ticks_t first_tick = now();
+  ticks_t period_start_tick = now();
 
   ticks_t elapsed_ticks = 0;
   uint32_t mbuf_burst_offset = 0;
@@ -370,7 +370,6 @@ static int tx_worker_main(void* arg) {
   uint64_t num_total_tx = 0;
 
   ticks_t flow_ticks = worker_config->runtime->flow_ttl * clock_scale() / 1000;
-  ticks_t timer = TIMER_INFINITE;
 
   auto queue_id = worker_config->queue_id;
 
@@ -383,19 +382,15 @@ static int tx_worker_main(void* arg) {
 
   // Run until the application is killed
   while (likely(!quit)) {
-    // TODO: take the timer into consideration, and stop transmiting if we go
-    // over the deadline.
-    bool overtime = (timer != TIMER_INFINITE);
-    if (unlikely(worker_config->runtime->update_cnt > last_update_cnt ||
-                 overtime)) {
-      elapsed_ticks += TscClock::now() - first_tick;
+    if (unlikely(worker_config->runtime->update_cnt > last_update_cnt)) {
+      elapsed_ticks += now() - first_tick;
       wait_to_start();
 
       last_update_cnt = worker_config->runtime->update_cnt;
       ticks_per_burst = compute_ticks_per_burst(
           worker_config->runtime->rate_per_core, worker_config->pkt_size * 8);
       flow_ticks = worker_config->runtime->flow_ttl * clock_scale() / 1000;
-      first_tick = TscClock::now();
+      first_tick = now();
 
       for (uint32_t i = 0; i < num_base_flows; i++) {
         chosen_flows_idxs[i] = 0;
@@ -446,7 +441,7 @@ static int tx_worker_main(void* arg) {
 
     num_total_tx += num_tx;
 
-    while ((period_start_tick = TscClock::now()) < period_end_tick) {
+    while ((period_start_tick = now()) < period_end_tick) {
       // prevent the compiler from removing this loop
       __asm__ __volatile__("");
     }
@@ -471,48 +466,28 @@ static void wait_port_up(uint16_t port_id) {
       rte_exit(EXIT_FAILURE, "Error getting port status (port %u) info: %s\n",
                port_id, strerror(-retval));
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    sleep_ms(100);
   }
 }
 
 static void test() {
-  // time_s_t warmup_duration = 5;
-  // rate_mbps_t warmup_rate = 1;
-  // churn_fpm_t warmup_churn = 0;
-
   time_s_t duration = 5;
   rate_mbps_t rate = 100 * 1000;
   churn_fpm_t churn = 0;
 
-  cmd_timer(duration);
-
-  // printf("Warming up...\n");
-  // cmd_rate(warmup_rate);
-  // cmd_churn(warmup_churn);
-
-  // cmd_start();
-  // std::this_thread::sleep_for(std::chrono::seconds(warmup_duration));
-
-  printf("Trying %.2lf Mbps rate churn %lu fpm...\n", rate, churn);
+  printf("Sending at %.2lf Mbps with churn %lu fpm...\n", rate, churn);
   cmd_rate(rate / 1e3);
   cmd_churn(churn);
 
   cmd_stats_reset();
 
   cmd_start();
-  std::this_thread::sleep_for(std::chrono::seconds(duration + 1));
+  sleep_s(duration);
   cmd_stop();
 
   stats_t stats = get_stats();
 
   float loss = (float)(stats.tx_pkts - stats.rx_pkts) / stats.tx_pkts;
-
-  // Acount for the warmup phase
-  // uint64_t warmup_pkts =
-  //     (warmup_rate * 1e6 * warmup_duration) / (config.pkt_size + 20) * 8;
-  // printf("  TX:   %" PRIu64 "\n", stats.tx_pkts);
-  // stats.tx_pkts -= warmup_pkts;
-  // printf("warmup tx %lu\n", warmup_pkts);
 
   bits_t tx_bits = (config.pkt_size + 20) * 8 * stats.tx_pkts;
 
@@ -582,7 +557,7 @@ int main(int argc, char* argv[]) {
 
   for (auto worker_config : workers_configs) {
     while (!worker_config->ready) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      sleep_ms(100);
     }
   }
 

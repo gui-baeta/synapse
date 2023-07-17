@@ -1,4 +1,3 @@
-
 #include <cmdline.h>
 #include <cmdline_parse.h>
 #include <cmdline_parse_etheraddr.h>
@@ -11,6 +10,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "clock.h"
 #include "pktgen.h"
 
 #define CMDLINE_PARSE_INT_NTOKENS(NTOKENS)            \
@@ -51,8 +51,10 @@ cmdline_parse_token_string_t cmd_rate_token_cmd =
     TOKEN_STRING_INITIALIZER(struct cmd_int_params, cmd, "rate");
 cmdline_parse_token_string_t cmd_churn_token_cmd =
     TOKEN_STRING_INITIALIZER(struct cmd_int_params, cmd, "churn");
-cmdline_parse_token_string_t cmd_timer_token_cmd =
-    TOKEN_STRING_INITIALIZER(struct cmd_int_params, cmd, "timer");
+cmdline_parse_token_string_t cmd_run_token_cmd =
+    TOKEN_STRING_INITIALIZER(struct cmd_int_params, cmd, "run");
+cmdline_parse_token_string_t cmd_warmup_token_cmd =
+    TOKEN_STRING_INITIALIZER(struct cmd_int_params, cmd, "warmup");
 cmdline_parse_token_num_t cmd_int_token_param =
     TOKEN_NUM_INITIALIZER(struct cmd_int_params, param, RTE_UINT32);
 
@@ -91,9 +93,28 @@ void cmd_churn(churn_fpm_t churn) {
   signal_new_config();
 }
 
-void cmd_timer(timer_s_t time) {
-  config.runtime.timer = time;
+void cmd_run(time_s_t duration) {
   signal_new_config();
+
+  rate_gbps_t rate = config.rate;
+
+  cmd_rate(config.warmup_rate);
+
+  cmd_start();
+  sleep_s(config.warmup_duration);
+
+  cmd_rate(rate);
+  cmd_stats_reset();
+
+  sleep_s(duration);
+
+  cmd_stop();
+}
+
+void cmd_warmup(time_s_t time) {
+  signal_new_config();
+
+  config.warmup_duration = time;
 }
 
 static void cmd_quit_callback(__rte_unused void *ptr_params,
@@ -142,12 +163,12 @@ static void cmd_churn_callback(__rte_unused void *ptr_params,
   cmd_churn(churn);
 }
 
-static void cmd_timer_callback(__rte_unused void *ptr_params,
-                               __rte_unused struct cmdline *ctx,
-                               __rte_unused void *ptr_data) {
+static void cmd_run_callback(__rte_unused void *ptr_params,
+                             __rte_unused struct cmdline *ctx,
+                             __rte_unused void *ptr_data) {
   struct cmd_int_params *params = ptr_params;
   time_s_t time = (double)params->param;
-  cmd_timer(time);
+  cmd_run(time);
 }
 
 CMDLINE_PARSE_INT_NTOKENS(1)
@@ -208,12 +229,11 @@ cmd_churn_cmd = {
 };
 
 CMDLINE_PARSE_INT_NTOKENS(2)
-cmd_timer_cmd = {
-    .f = cmd_timer_callback,
+cmd_run_cmd = {
+    .f = cmd_run_callback,
     .data = NULL,
-    .help_str = "timer <time>\n     Set tx timer in seconds",
-    .tokens = {(void *)&cmd_timer_token_cmd, (void *)&cmd_int_token_param,
-               NULL},
+    .help_str = "run <time>\n     Run for <time> seconds and then stop",
+    .tokens = {(void *)&cmd_run_token_cmd, (void *)&cmd_int_token_param, NULL},
 };
 
 cmdline_parse_ctx_t list_prompt_commands[] = {
@@ -224,7 +244,7 @@ cmdline_parse_ctx_t list_prompt_commands[] = {
     (cmdline_parse_inst_t *)&cmd_stats_reset_cmd,
     (cmdline_parse_inst_t *)&cmd_rate_cmd,
     (cmdline_parse_inst_t *)&cmd_churn_cmd,
-    (cmdline_parse_inst_t *)&cmd_timer_cmd,
+    (cmdline_parse_inst_t *)&cmd_run_cmd,
     NULL,
 };
 
