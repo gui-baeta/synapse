@@ -65,6 +65,7 @@ def get_test_experiment(config: list, data_dir: Path) -> Experiment:
         switch=switch,
         controller=controller,
         pktgen=pktgen,
+        churn=0,
         console=console,
     )
 

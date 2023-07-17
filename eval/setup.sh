@@ -19,9 +19,6 @@ echo "Using python3 from $(which python3)"
 # Install requirements.
 python3 -m pip install -r requirements.txt
 
-# Install local netexp
-python3 -m pip install ./util/netexp
-
 # Initialize config.
 if [ ! -f "$DEFAULT_CONFIG_FILE" ]; then
     echo "Initializing config file with default values."

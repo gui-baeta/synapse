@@ -19,6 +19,7 @@ DEFAULT_MAX_ACCEPTABLE_LOSS     = 0.001   # 0.1%
 DEFAULT_WARMUP_TIME             = 5       # 5 seconds
 DEFAULT_WARMUP_RATE             = 1       # 1 Mbps
 DEFAULT_REST_TIME               = 2       # 2 seconds
+DEFAULT_CHURN                   = 0       # No churn
 
 class Throughput(Experiment):
     def __init__(
@@ -29,6 +30,7 @@ class Throughput(Experiment):
         switch: Switch,
         controller: Controller,
         pktgen: Pktgen,
+        churn: int = DEFAULT_CHURN,
         max_throughput_mbps: int = DEFAULT_MAX_THROUGHPUT,
         target_duration: int = DEFAULT_DURATION,
         throughput_search_steps: int = DEFAULT_THROUGHPUT_SEARCH_STEPS,
@@ -40,6 +42,7 @@ class Throughput(Experiment):
         self.switch = switch
         self.controller = controller
         self.pktgen = pktgen
+        self.churn = churn
         self.max_throughput_mbps = max_throughput_mbps
         self.target_duration = target_duration
         self.throughput_search_steps = throughput_search_steps
@@ -74,7 +77,7 @@ class Throughput(Experiment):
     
     def _find_stable_throughput(
         self,
-        churn: int = 0,
+        churn: int = DEFAULT_CHURN,
         steps: int = DEFAULT_THROUGHPUT_SEARCH_STEPS,
         max_rate: int = DEFAULT_MAX_THROUGHPUT,
     ) -> tuple[int,int]:
@@ -120,7 +123,7 @@ class Throughput(Experiment):
 
                 nb_tx_pkts, nb_rx_pkts = self.pktgen.get_stats()
 
-                if nb_tx_pkts == 0 or nb_rx_pkts == 0:
+                if nb_tx_pkts == 0:
                     log_file.write(f"No packets flowing, repeating run\n")
 
             nb_tx_bits = nb_tx_pkts * (pkt_size + 20) * 8
@@ -182,7 +185,7 @@ class Throughput(Experiment):
         step_progress.update(task_id, description=f"({current_iter})")
 
         throughput_bps, throughput_pps = self._find_stable_throughput(
-            churn=0,
+            churn=self.churn,
             steps=self.throughput_search_steps,
             max_rate=self.max_throughput_mbps,
         )

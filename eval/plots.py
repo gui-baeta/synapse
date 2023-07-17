@@ -155,7 +155,9 @@ def get_data(data_dir: Path, pattern: str, keys: list[tuple[str, type]]) -> list
 
     for file in data_dir.iterdir():
         match = re.search(pattern, file.stem)
-        assert match
+
+        # Ignore files that do not match the pattern
+        if not match: continue
 
         file_data = {
             "config": {},
