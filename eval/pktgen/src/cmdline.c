@@ -171,6 +171,14 @@ static void cmd_run_callback(__rte_unused void *ptr_params,
   cmd_run(time);
 }
 
+static void cmd_warmup_callback(__rte_unused void *ptr_params,
+                                __rte_unused struct cmdline *ctx,
+                                __rte_unused void *ptr_data) {
+  struct cmd_int_params *params = ptr_params;
+  time_s_t time = (double)params->param;
+  cmd_warmup(time);
+}
+
 CMDLINE_PARSE_INT_NTOKENS(1)
 cmd_quit_cmd = {
     .f = cmd_quit_callback,
@@ -236,6 +244,15 @@ cmd_run_cmd = {
     .tokens = {(void *)&cmd_run_token_cmd, (void *)&cmd_int_token_param, NULL},
 };
 
+CMDLINE_PARSE_INT_NTOKENS(2)
+cmd_warmup_cmd = {
+    .f = cmd_warmup_callback,
+    .data = NULL,
+    .help_str = "warmup <time>\n     Set warmup duration to <time> seconds",
+    .tokens = {(void *)&cmd_warmup_token_cmd, (void *)&cmd_int_token_param,
+               NULL},
+};
+
 cmdline_parse_ctx_t list_prompt_commands[] = {
     (cmdline_parse_inst_t *)&cmd_quit_cmd,
     (cmdline_parse_inst_t *)&cmd_start_cmd,
@@ -245,6 +262,7 @@ cmdline_parse_ctx_t list_prompt_commands[] = {
     (cmdline_parse_inst_t *)&cmd_rate_cmd,
     (cmdline_parse_inst_t *)&cmd_churn_cmd,
     (cmdline_parse_inst_t *)&cmd_run_cmd,
+    (cmdline_parse_inst_t *)&cmd_warmup_cmd,
     NULL,
 };
 
