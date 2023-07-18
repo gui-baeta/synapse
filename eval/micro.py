@@ -40,20 +40,20 @@ def get_closest_power_of_two(value):
 
 def send_sources(
     config: list,
-    exp_name: str,
+    name: str,
     local_switch: Path,
     local_controller: Path,
 ) -> tuple[Path, Path]:
-    exp_name = exp_name.replace(' ', '-')
+    name = Path(name).stem
 
-    remote_switch     = Path(config["paths"]["dataplane"]) / f"{exp_name}{local_switch.suffix}"
-    remote_controller = Path(config["paths"]["controller"]) / f"{exp_name}{local_controller.suffix}"
+    remote_switch     = Path(config["paths"]["dataplane"]) / f"{name}{local_switch.suffix}"
+    remote_controller = Path(config["paths"]["controller"]) / f"{name}{local_controller.suffix}"
 
     switch = RemoteHost(config["hosts"]["switch"])
-    switch.upload_file(local_switch, remote_switch, overwrite=True, log_file=False)
+    switch.upload_file(local_switch, remote_switch, overwrite=True)
 
     controller = RemoteHost(config["hosts"]["controller"])
-    controller.upload_file(local_controller, remote_controller, overwrite=True, log_file=False)
+    controller.upload_file(local_controller, remote_controller, overwrite=True)
     
     return remote_switch, remote_controller
 
@@ -87,7 +87,7 @@ def get_cached_tables_churn_experiments(
             switch_src     = DATA_STRUCTURES_DIR / Path("cached-tables") / "cached-tables.p4"
             controller_src = DATA_STRUCTURES_DIR / Path("cached-tables") / "cached-tables.cpp"
 
-        switch_src, controller_src = send_sources(config, exp_name, switch_src, controller_src)
+        switch_src, controller_src = send_sources(config, data_fname, switch_src, controller_src)
 
         pktgen = Pktgen(
             hostname=config["hosts"]["pktgen"],

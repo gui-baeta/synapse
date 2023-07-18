@@ -20,28 +20,28 @@ from util.churn import Churn
 if sys.version_info < (3, 9, 0):
     raise RuntimeError("Python 3.9 or a more recent version is required.")
 
-CURRENT_DIR         = Path(os.path.abspath(os.path.dirname(__file__)))
-MICRO_DIR           = CURRENT_DIR / Path("micro")
+CURRENT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
+MICRO_DIR   = CURRENT_DIR / Path("micro")
 
 console = Console()
 
 def send_sources(
     config: list,
-    exp_name: str,
+    name: str,
     local_switch: Path,
     local_controller: Path,
 ) -> tuple[Path, Path]:
-    exp_name = exp_name.replace(' ', '-')
+    name = Path(name).stem
 
-    remote_switch     = Path(config["paths"]["dataplane"]) / f"{exp_name}{local_switch.suffix}"
-    remote_controller = Path(config["paths"]["controller"]) / f"{exp_name}{local_controller.suffix}"
+    remote_switch     = Path(config["paths"]["dataplane"]) / f"{name}{local_switch.suffix}"
+    remote_controller = Path(config["paths"]["controller"]) / f"{name}{local_controller.suffix}"
 
     switch = RemoteHost(config["hosts"]["switch"])
     switch.upload_file(local_switch, remote_switch, overwrite=True)
 
     controller = RemoteHost(config["hosts"]["controller"])
     controller.upload_file(local_controller, remote_controller, overwrite=True)
-
+    
     return remote_switch, remote_controller
 
 def get_test_experiment(config: list, data_dir: Path) -> Experiment:
