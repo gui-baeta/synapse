@@ -59,7 +59,7 @@ height_third = height_third * inches_per_pt
 figsize_third = (width_third, height_third)
 
 tight_layout_pad = 0.21
-linewidth = 0.75
+linewidth = 1
 elinewidth = 0.5
 capsize = 1
 markersize = 2.5
@@ -278,6 +278,7 @@ def plot_subplot(ax,
                  data: list[dict],
                  set_palette: Optional[list[str]] = None,
                  set_markers_list: Optional[list[str]] = None,
+                 lines_only: bool = False,
                  **kwargs) -> None:
     if set_palette is None:
         set_palette = palette
@@ -288,20 +289,25 @@ def plot_subplot(ax,
     for d, color, marker in zip(data, itertools.cycle(set_palette), itertools.cycle(markers_list)):
         # Default options.
         options = {
-            "marker": marker,
-            "markersize": markersize,
-            "markeredgewidth": markeredgewidth,
-            "markerfacecolor": color,
             "linewidth": linewidth,
             "capsize": capsize,
             "capthick": capthick,
         }
+
+        if not lines_only:
+            options.update({
+                "marker": marker,
+                "markersize": markersize,
+                "markeredgewidth": markeredgewidth,
+                "markerfacecolor": color,
+            })
+
         options.update(kwargs)
 
         ax.errorbar(
             d["x"],
             d["y"],
-            yerr=d["yerr"],
+            yerr=None if lines_only else d["yerr"],
             label=d["label"],
             **options
         )
@@ -372,7 +378,7 @@ def plot_micro_cached_tables_churn(data_dir: Path,
 
         fig, ax = plt.subplots()
 
-        plot_subplot(ax, x_label, y_label, data)
+        plot_subplot(ax, x_label, y_label, data, lines_only=True)
 
         ax.legend(loc='lower right')
 
