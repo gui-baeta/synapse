@@ -20,6 +20,8 @@ class Switch:
         self.build_vars = build_vars
         self.log_file = log_file
 
+        assert self.host.remote_file_exists(self.src)
+
     def install(self) -> None:
         compilation_cmd = f"{str(self.compiler)} {str(self.src)}"
 

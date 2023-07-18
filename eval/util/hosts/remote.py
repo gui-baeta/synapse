@@ -2,6 +2,9 @@ import paramiko
 import os
 import time
 
+from pathlib import Path
+from typing import TextIO, Union
+
 from .host import Host
 
 from .commands.command import Command
@@ -20,15 +23,34 @@ class RemoteHost(Host):
     def run_command(self, *args, **kwargs) -> Command:
         return RemoteCommand(self.ssh_client, *args, **kwargs)
     
+    def remote_file_exists(
+        self,
+        remote_path: Path,
+    ) -> bool:
+        return super().remote_file_exists(
+            self.host,
+            remote_path,
+        )
+
+    def upload_file(
+        self,
+        local_path: Path,
+        remote_path: Path,
+        overwrite: bool = True,
+    ) -> None:
+        super().upload_file(
+            self.host,
+            local_path,
+            remote_path,
+            overwrite,
+        )
+    
     @property
     def ssh_client(self):
         if self._ssh_client is not None:
             return self._ssh_client
 
         # adapted from https://gist.github.com/acdha/6064215
-        nb_retries: 0
-        retry_interval: 1
-
         client = paramiko.SSHClient()
         client._policy = paramiko.WarningPolicy()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -67,8 +89,8 @@ class RemoteHost(Host):
             except KeyboardInterrupt as e:
                 raise e
             except Exception as e:
-                time.sleep(retry_interval)
-                if trial > nb_retries:
+                time.sleep(self.retry_interval)
+                if trial > self.nb_retries:
                     raise e
 
         self._ssh_client = client

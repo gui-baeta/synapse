@@ -31,6 +31,8 @@ class Controller:
         if timeout_ms < MIN_TIMEOUT:
             raise Exception(f"Timeout value must be >= {MIN_TIMEOUT}ms (is {timeout_ms}ms)")
         
+        assert self.host.remote_file_exists(self.src)
+        
     def __compile(self) -> None:
         compilation_cmd = f"{self.controller_env} {str(self.builder)} {str(self.src)}"
         cmd = self.host.run_command(

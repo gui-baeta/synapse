@@ -4,11 +4,13 @@ import sys
 import click
 import tomli
 import math
+import os
 
 from pathlib import Path
 
 from rich.console import Console
 
+from util.hosts.remote import RemoteHost
 from util.hosts.pktgen import Pktgen
 from util.hosts.switch import Switch
 from util.hosts.controller import Controller
@@ -18,6 +20,10 @@ from util.churn import Churn
 
 if sys.version_info < (3, 9, 0):
     raise RuntimeError("Python 3.9 or a more recent version is required.")
+
+CURRENT_DIR         = Path(os.path.abspath(os.path.dirname(__file__)))
+MICRO_DIR           = CURRENT_DIR / Path("micro")
+DATA_STRUCTURES_DIR = MICRO_DIR / Path("data-structures")
 
 console = Console()
 
@@ -32,7 +38,30 @@ def get_closest_power_of_two(value):
 
     return (1 << p) if delta_lo < delta_hi else (1 << (p + 1))
 
-def get_cached_tables_churn_experiments(config: list, data_dir: Path, iters: int) -> list[Experiment]:
+def send_sources(
+    config: list,
+    exp_name: str,
+    local_switch: Path,
+    local_controller: Path,
+) -> tuple[Path, Path]:
+    exp_name = exp_name.replace(' ', '-')
+
+    remote_switch     = Path(config["paths"]["dataplane"]) / f"{exp_name}{local_switch.suffix}"
+    remote_controller = Path(config["paths"]["controller"]) / f"{exp_name}{local_controller.suffix}"
+
+    switch = RemoteHost(config["hosts"]["switch"])
+    switch.upload_file(local_switch, remote_switch, overwrite=True, log_file=False)
+
+    controller = RemoteHost(config["hosts"]["controller"])
+    controller.upload_file(local_controller, remote_controller, overwrite=True, log_file=False)
+    
+    return remote_switch, remote_controller
+
+def get_cached_tables_churn_experiments(
+    config: list,
+    data_dir: Path,
+    iters: int,
+) -> list[Experiment]:
     experiments = []
 
     cache_size         = 1024
@@ -51,8 +80,14 @@ def get_cached_tables_churn_experiments(config: list, data_dir: Path, iters: int
         exp_name   = f"cached-tables-{int(rel_cached*100)}%-churn"
         data_fname = f"micro_cached_tables_cached_{int(rel_cached*100)}_churn.csv"
 
-        switch_src     = "cached-tables.p4"  if rel_cached > 0 else "tables.p4"
-        controller_src = "cached-tables.cpp" if rel_cached > 0 else "tables.cpp"
+        if rel_cached == 0:
+            switch_src     = DATA_STRUCTURES_DIR / Path("tables") / "tables.p4"
+            controller_src = DATA_STRUCTURES_DIR / Path("tables") / "tables.cpp"
+        else:
+            switch_src     = DATA_STRUCTURES_DIR / Path("cached-tables") / "cached-tables.p4"
+            controller_src = DATA_STRUCTURES_DIR / Path("cached-tables") / "cached-tables.cpp"
+
+        switch_src, controller_src = send_sources(config, exp_name, switch_src, controller_src)
 
         pktgen = Pktgen(
             hostname=config["hosts"]["pktgen"],
@@ -70,7 +105,7 @@ def get_cached_tables_churn_experiments(config: list, data_dir: Path, iters: int
 
         switch = Switch(
             hostname=config["hosts"]["switch"],
-            src=Path(config["paths"]["dataplane"]) / Path(switch_src),
+            src=switch_src,
             compiler=config["paths"]["dataplane_build_script"],
             build_vars={
                 "REGISTER_INDEX_WIDTH": cache_bit_width,
@@ -80,7 +115,7 @@ def get_cached_tables_churn_experiments(config: list, data_dir: Path, iters: int
 
         controller = Controller(
             hostname=config["hosts"]["controller"],
-            src=Path(config["paths"]["dataplane"]) / Path(controller_src),
+            src=controller_src,
             builder=config["paths"]["controller_build_script"],
             sde_install=config["paths"]["sde_install"],
             timeout_ms=expiration_time_ms,

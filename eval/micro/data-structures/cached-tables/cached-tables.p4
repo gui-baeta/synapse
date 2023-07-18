@@ -162,7 +162,7 @@ parser IngressParser(
 }
 
 #define ONE_SECOND 15258 // 1 second in units of 2**16 nanoseconds
-#define EXPIRATION_TIME (10 * ONE_SECOND)
+#define EXPIRATION_TIME (ONE_SECOND)
 
 // Pass the value of REGISTER_INDEX_WIDTH during compilation. E.g.:
 // $ p4_build.sh cache.p4 -DREGISTER_INDEX_WIDTH=12

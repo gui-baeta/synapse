@@ -67,7 +67,9 @@ extern "C" {
 		fflush(stderr);                      \
 	}
 
+#ifndef PROGRAM
 #define PROGRAM "cached-tables"
+#endif
 
 #define WAIT_FOR_ENTER(msg)                                                 \
 	{                                                                       \

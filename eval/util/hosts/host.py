@@ -1,8 +1,10 @@
 import sys
 import re
+import subprocess
 
 from abc import ABC, abstractmethod
 from typing import TextIO, Union
+from pathlib import Path
 
 from .commands.command import Command
 
@@ -13,6 +15,37 @@ class Host(ABC):
     @abstractmethod
     def run_command(self, *args, **kwargs) -> Command:
         pass
+
+    def remote_file_exists(
+        self,
+        host: str,
+        remote_path: Path,
+    ) -> bool: 
+        cp = subprocess.run(
+            [ "ssh", host, "test", "-f", str(remote_path) ],
+            stdout=sys.stdout,
+            stderr=sys.stdout,
+        )
+
+        return cp.returncode == 0
+
+    def upload_file(
+        self,
+        host: str,
+        local_path: Path,
+        remote_path: Path,
+        overwrite: bool = True,
+    ) -> None:
+        if not overwrite and self.remote_file_exists(remote_path):
+            return
+
+        cp = subprocess.run(
+            [ "scp", "-r", str(local_path), f"{host}:{str(remote_path)}" ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+        cp.check_returncode()
 
     def validate_pcie_dev(
         self,

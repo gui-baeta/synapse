@@ -3,12 +3,13 @@
 import sys
 import click
 import tomli
-import math
+import os
 
 from pathlib import Path
 
 from rich.console import Console
 
+from util.hosts.remote import RemoteHost
 from util.hosts.pktgen import Pktgen
 from util.hosts.switch import Switch
 from util.hosts.controller import Controller
@@ -19,7 +20,29 @@ from util.churn import Churn
 if sys.version_info < (3, 9, 0):
     raise RuntimeError("Python 3.9 or a more recent version is required.")
 
+CURRENT_DIR         = Path(os.path.abspath(os.path.dirname(__file__)))
+MICRO_DIR           = CURRENT_DIR / Path("micro")
+
 console = Console()
+
+def send_sources(
+    config: list,
+    exp_name: str,
+    local_switch: Path,
+    local_controller: Path,
+) -> tuple[Path, Path]:
+    exp_name = exp_name.replace(' ', '-')
+
+    remote_switch     = Path(config["paths"]["dataplane"]) / f"{exp_name}{local_switch.suffix}"
+    remote_controller = Path(config["paths"]["controller"]) / f"{exp_name}{local_controller.suffix}"
+
+    switch = RemoteHost(config["hosts"]["switch"])
+    switch.upload_file(local_switch, remote_switch, overwrite=True)
+
+    controller = RemoteHost(config["hosts"]["controller"])
+    controller.upload_file(local_controller, remote_controller, overwrite=True)
+
+    return remote_switch, remote_controller
 
 def get_test_experiment(config: list, data_dir: Path) -> Experiment:
     pkt_size = 64
@@ -28,8 +51,10 @@ def get_test_experiment(config: list, data_dir: Path) -> Experiment:
     exp_name   = f"redirector throughput"
     data_fname = f"redirector_throughput.csv"
 
-    switch_src     = "redirector.p4"
-    controller_src = "redirector.cpp"
+    switch_src     = MICRO_DIR / Path("redirector") / "redirector.p4"
+    controller_src = MICRO_DIR / Path("redirector") / "redirector.cpp"
+
+    switch_src, controller_src = send_sources(config, exp_name, switch_src, controller_src)
 
     pktgen = Pktgen(
         hostname=config["hosts"]["pktgen"],
@@ -45,14 +70,14 @@ def get_test_experiment(config: list, data_dir: Path) -> Experiment:
 
     switch = Switch(
         hostname=config["hosts"]["switch"],
-        src=Path(config["paths"]["dataplane"]) / Path(switch_src),
+        src=switch_src,
         compiler=config["paths"]["dataplane_build_script"],
         log_file=config["logs"]["controller"],
     )
 
     controller = Controller(
         hostname=config["hosts"]["controller"],
-        src=Path(config["paths"]["dataplane"]) / Path(controller_src),
+        src=controller_src,
         builder=config["paths"]["controller_build_script"],
         sde_install=config["paths"]["sde_install"],
         log_file=config["logs"]["controller"],

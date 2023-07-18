@@ -70,7 +70,7 @@ class Throughput(Experiment):
                     end = row.rfind(",")
                     row = row[:end]
 
-                    self.experiment_tracker[row] += 1
+                    self.experiment_tracker += 1
         else:
             with open(self.save_name, "w") as f:
                 f.write(header)
@@ -167,6 +167,13 @@ class Throughput(Experiment):
         return real_throughput_bps_winner, real_throughput_pps_winner
 
     def run(self, step_progress: Progress, current_iter: int) -> None:
+        task_id = step_progress.add_task(self.name, total=1)
+
+        if self.experiment_tracker > current_iter:
+            self.console.log(f"[orange1]Skipping: {current_iter}")
+            step_progress.update(task_id, advance=1)
+            return
+
         self.switch.install()
         
         self.controller.launch()
@@ -174,13 +181,6 @@ class Throughput(Experiment):
 
         self.pktgen.wait_launch()
         self.controller.wait_ready()
-
-        task_id = step_progress.add_task(self.name, total=1)
-
-        if self.experiment_tracker > current_iter:
-            self.console.log(f"[orange1]Skipping: {current_iter}")
-            step_progress.update(task_id, advance=1)
-            return
 
         step_progress.update(task_id, description=f"({current_iter})")
 
