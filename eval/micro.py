@@ -64,75 +64,79 @@ def get_cached_tables_churn_experiments(
 ) -> list[Experiment]:
     experiments = []
 
-    cache_size         = 1024
+    cache_size         = 256
     pkt_size           = 64
     expiration_time_ms = 10
-    rel_cached_flows   = [ 0, 0.25, 0.50, 0.75, 1 ]
+    rel_cached_flows   = [ 0, 0.05, 0.25, 0.50, 0.75, 0.95, 1 ]
+    # ttls_ms            = [ 10, 100, 1000, 10000 ]
+    ttls_ms            = [ 10 ]
 
     cache_bit_width = int(math.log(cache_size, 2))
 
     # Cache size must be a power of 2
     assert cache_size > 1 and ((cache_size - 1) & cache_size) == 0
 
-    for rel_cached in rel_cached_flows:
-        nb_flows = int(cache_size / rel_cached) if rel_cached > 0 else cache_size
+    for ttl_ms in ttls_ms:
+        for rel_cached in rel_cached_flows:
+            nb_flows = int(cache_size / rel_cached) if rel_cached > 0 else cache_size
 
-        exp_name   = f"cached-tables-{int(rel_cached*100)}%-churn"
-        data_fname = f"micro_cached_tables_cached_{int(rel_cached*100)}_churn.csv"
+            exp_name   = f"micro-cached-tables-{rel_cached}-cached-{ttl_ms}ms-ttl-churn"
+            data_fname = f"{exp_name.replace(' ', '-')}.csv"
 
-        if rel_cached == 0:
-            switch_src     = DATA_STRUCTURES_DIR / Path("tables") / "tables.p4"
-            controller_src = DATA_STRUCTURES_DIR / Path("tables") / "tables.cpp"
-        else:
-            switch_src     = DATA_STRUCTURES_DIR / Path("cached-tables") / "cached-tables.p4"
-            controller_src = DATA_STRUCTURES_DIR / Path("cached-tables") / "cached-tables.cpp"
+            if rel_cached == 0:
+                switch_src     = DATA_STRUCTURES_DIR / Path("tables") / "tables.p4"
+                controller_src = DATA_STRUCTURES_DIR / Path("tables") / "tables.cpp"
+            else:
+                switch_src     = DATA_STRUCTURES_DIR / Path("cached-tables") / "cached-tables.p4"
+                controller_src = DATA_STRUCTURES_DIR / Path("cached-tables") / "cached-tables.cpp"
 
-        switch_src, controller_src = send_sources(config, data_fname, switch_src, controller_src)
+            switch_src, controller_src = send_sources(config, data_fname, switch_src, controller_src)
 
-        pktgen = Pktgen(
-            hostname=config["hosts"]["pktgen"],
-            rx_pcie_dev=config["devices"]["pktgen"]["rx_dev"],
-            tx_pcie_dev=config["devices"]["pktgen"]["tx_dev"],
-            nb_tx_cores=config["devices"]["pktgen"]["nb_tx_cores"],
-            nb_flows=nb_flows,
-            pkt_size=pkt_size,
-            exp_time_us=expiration_time_ms * 1000,
-            crc_unique_flows=(nb_flows <= cache_size),
-            crc_bits=cache_bit_width,
-            pktgen_exe=Path(config["paths"]["pktgen"]),
-            log_file=config["logs"]["pktgen"],
-        )
+            pktgen = Pktgen(
+                hostname=config["hosts"]["pktgen"],
+                rx_pcie_dev=config["devices"]["pktgen"]["rx_dev"],
+                tx_pcie_dev=config["devices"]["pktgen"]["tx_dev"],
+                nb_tx_cores=config["devices"]["pktgen"]["nb_tx_cores"],
+                nb_flows=nb_flows,
+                pkt_size=pkt_size,
+                exp_time_us=expiration_time_ms * 1000,
+                crc_unique_flows=(nb_flows <= cache_size),
+                crc_bits=cache_bit_width,
+                pktgen_exe=Path(config["paths"]["pktgen"]),
+                log_file=config["logs"]["pktgen"],
+            )
 
-        switch = Switch(
-            hostname=config["hosts"]["switch"],
-            src=switch_src,
-            compiler=config["paths"]["dataplane_build_script"],
-            build_vars={
-                "REGISTER_INDEX_WIDTH": cache_bit_width,
-            },
-            log_file=config["logs"]["controller"],
-        )
+            switch = Switch(
+                hostname=config["hosts"]["switch"],
+                src=switch_src,
+                compiler=config["paths"]["dataplane_build_script"],
+                build_vars={
+                    "REGISTER_INDEX_WIDTH": cache_bit_width,
+                    "CACHE_TTL_MS": ttl_ms,
+                },
+                log_file=config["logs"]["controller"],
+            )
 
-        controller = Controller(
-            hostname=config["hosts"]["controller"],
-            src=controller_src,
-            builder=config["paths"]["controller_build_script"],
-            sde_install=config["paths"]["sde_install"],
-            timeout_ms=expiration_time_ms,
-            log_file=config["logs"]["controller"],
-        )
+            controller = Controller(
+                hostname=config["hosts"]["controller"],
+                src=controller_src,
+                builder=config["paths"]["controller_build_script"],
+                sde_install=config["paths"]["sde_install"],
+                timeout_ms=expiration_time_ms,
+                log_file=config["logs"]["controller"],
+            )
 
-        churn = Churn(
-            name=exp_name,
-            iterations=iters,
-            save_name=data_dir / Path(data_fname),
-            switch=switch,
-            controller=controller,
-            pktgen=pktgen,
-            console=console,
-        )
+            churn = Churn(
+                name=exp_name,
+                iterations=iters,
+                save_name=data_dir / Path(data_fname),
+                switch=switch,
+                controller=controller,
+                pktgen=pktgen,
+                console=console,
+            )
 
-        experiments.append(churn)
+            experiments.append(churn)
 
     return experiments
 

@@ -161,8 +161,12 @@ parser IngressParser(
 	}
 }
 
-#define ONE_SECOND 15258 // 1 second in units of 2**16 nanoseconds
-#define EXPIRATION_TIME (ONE_SECOND)
+#define MILLISEC 15 // 1 millisecond in units of 2**16 nanoseconds
+                    // Actually this is an approximation, as 1e6/2**16 ~ 15.2587890625
+
+// Pass the value of CACHE_TTL_MS during compilation. E.g.:
+// $ p4_build.sh cache.p4 -DCACHE_TTL_MS=1000
+#define CACHE_TTL (CACHE_TTL_MS * MILLISEC)
 
 // Pass the value of REGISTER_INDEX_WIDTH during compilation. E.g.:
 // $ p4_build.sh cache.p4 -DREGISTER_INDEX_WIDTH=12
@@ -208,7 +212,7 @@ control Ingress(
 		void apply(inout cache_control_t value, out bool reserved) {
 			reserved = false;
 
-			if (now < value.last_time || now > value.last_time + EXPIRATION_TIME) {
+			if (now < value.last_time || now > value.last_time + CACHE_TTL) {
 				value.last_time = now;
 				value.valid = 1;
 				reserved = true;
@@ -221,7 +225,7 @@ control Ingress(
 			valid = false;
 
 			if (value.valid == 1) {
-				if (now > value.last_time + EXPIRATION_TIME) {
+				if (now > value.last_time + CACHE_TTL) {
 					value.valid = 0;
 				} else {
 					valid = true;

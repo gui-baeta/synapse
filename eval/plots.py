@@ -159,6 +159,8 @@ def get_data(data_dir: Path, pattern: str, keys: list[tuple[str, type]]) -> list
         # Ignore files that do not match the pattern
         if not match: continue
 
+        assert len(match.groups()) == len(keys) 
+
         file_data = {
             "config": {},
             "labels": [],
@@ -343,55 +345,63 @@ def plot_micro_cached_tables_churn(data_dir: Path,
         (y_pps_elem, y_Mpps_scaler, y_Mpps_label, y_Mpps_fname_label, y_Mpps_max_value),
     ]
 
-    data_fname_keys = [ ("cached", int) ]
-    data_fname_pattern = r"micro_cached_tables_cached_(\d+)_churn"
+    data_fname_keys = [ ("cached", float), ("ttl_ms", int) ]
+
+    # Positive float pattern in regex: \d+\.\d+
+    data_fname_pattern = r"micro-cached-tables-(\d+\.?\d*)-cached-(\d+)ms-ttl-churn"
 
     files_data = get_data(data_dir, data_fname_pattern, data_fname_keys)
-    files_data = sorted(files_data, key=lambda x: x["config"]["cached"])
 
-    for y_elem, y_scaler, y_label, y_fname_label, y_max_value in y_cfgs:
-        fig_name = f"cached_tables_churn_{y_fname_label}"
+    all_ttl_ms = set([ file_data["config"]["ttl_ms"] for file_data in files_data ])
+    grouped_by_ttl_ms = { ttl_ms: [ d for d in files_data if d["config"]["ttl_ms"] == ttl_ms ] for ttl_ms in all_ttl_ms }
 
-        data = []
+    for ttl_ms, files_data in grouped_by_ttl_ms.items():
+        files_data = sorted(files_data, key=lambda x: x["config"]["cached"])
 
-        for file_data in files_data:
-            config = file_data["config"]
-            values = file_data["values"]
+        for y_elem, y_scaler, y_label, y_fname_label, y_max_value in y_cfgs:
+            fig_name = f"cached_tables_{ttl_ms}ms_ttl_{y_fname_label}"
+            data = []
 
-            agg_values = aggregate_values(values, x_elem, y_elem)
+            print(fig_name)
 
-            assert "cached" in config.keys()
-            cached = config["cached"]
+            for file_data in files_data:
+                config = file_data["config"]
+                values = file_data["values"]
 
-            x    = [ v[0] for v in agg_values ]
-            y    = [ v[1] / y_scaler for v in agg_values ]
-            yerr = [ v[2] / y_scaler for v in agg_values ]
+                agg_values = aggregate_values(values, x_elem, y_elem)
 
-            data.append({
-                "label": f"{cached}\%",
-                "x": x,
-                "y": y,
-                "yerr": yerr,
-            })
+                assert "cached" in config.keys()
+                cached = config["cached"]
 
-        set_figsize = (width / 2, height / 2)
+                x    = [ v[0] for v in agg_values ]
+                y    = [ v[1] / y_scaler for v in agg_values ]
+                yerr = [ v[2] / y_scaler for v in agg_values ]
 
-        fig, ax = plt.subplots()
+                data.append({
+                    "label": f"{int(cached*100)}\%",
+                    "x": x,
+                    "y": y,
+                    "yerr": yerr,
+                })
 
-        plot_subplot(ax, x_label, y_label, data, lines_only=True)
+            set_figsize = (width / 2, height / 2)
 
-        ax.legend(loc='lower right')
+            fig, ax = plt.subplots()
 
-        ax.set_xscale("symlog")
-        ax.set_ylim(0, y_max_value)
+            plot_subplot(ax, x_label, y_label, data, lines_only=False)
 
-        fig.set_size_inches(*set_figsize)
-        fig.tight_layout(pad=0.1)
+            ax.legend(loc='lower left')
 
-        plt.savefig(dest_dir / f"{fig_name}.pdf")
+            ax.set_xscale("symlog")
+            ax.set_ylim(0, y_max_value)
 
-        if opts.get("save_png", False):
-            plt.savefig(dest_dir / f"{fig_name}.png")
+            fig.set_size_inches(*set_figsize)
+            fig.tight_layout(pad=0.1)
+
+            plt.savefig(dest_dir / f"{fig_name}.pdf")
+
+            if opts.get("save_png", False):
+                plt.savefig(dest_dir / f"{fig_name}.png")
 
 @click.command()
 @click.argument("data_dir")

@@ -16,6 +16,7 @@ from util.hosts.pktgen import Pktgen
 DEFAULT_MID_PERF_CHURN  = 50_000 # 50 Gbps
 DEFAULT_LOW_PERF_CHURN  = 1_000  # 1 Gbps
 DEFAULT_NUM_CHURN_STEPS = 10
+STARTING_CHURN          = 1_000  # 1000 fpm
 
 class Churn(Throughput):
     def __init__(
@@ -67,7 +68,7 @@ class Churn(Throughput):
     # Finds the churn at which performance drops to half, and the one
     # that completely plummets it.
     def _find_churn_anchors(self, max_churn: int):
-        churn = 100
+        churn = STARTING_CHURN
         rate  = DEFAULT_MID_PERF_CHURN
 
         mid_churn  = None
