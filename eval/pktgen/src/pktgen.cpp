@@ -370,15 +370,16 @@ static int tx_worker_main(void* arg) {
   uint64_t num_total_tx = 0;
 
   ticks_t flow_ticks = worker_config->runtime->flow_ttl * clock_scale() / 1000;
-
-  auto queue_id = worker_config->queue_id;
+  ticks_t flow_ticks_offset_inc = flow_ticks / num_base_flows;
 
   for (uint32_t i = 0; i < num_base_flows; i++) {
     chosen_flows_idxs[i] = 0;
     // Spreading out the churn, to avoid bursty churn.
-    ticks_t offset = flow_ticks > 0 ? rte_rand() % flow_ticks : 0;
+    ticks_t offset = i * flow_ticks_offset_inc;
     flows_timers[i] = first_tick + offset;
   }
+
+  auto queue_id = worker_config->queue_id;
 
   // Run until the application is killed
   while (likely(!quit)) {
@@ -390,12 +391,14 @@ static int tx_worker_main(void* arg) {
       ticks_per_burst = compute_ticks_per_burst(
           worker_config->runtime->rate_per_core, worker_config->pkt_size * 8);
       flow_ticks = worker_config->runtime->flow_ttl * clock_scale() / 1000;
+      flow_ticks_offset_inc = flow_ticks / num_base_flows;
       first_tick = now();
 
       for (uint32_t i = 0; i < num_base_flows; i++) {
         chosen_flows_idxs[i] = 0;
+
         // Spreading out the churn, to avoid bursty churn.
-        ticks_t offset = flow_ticks > 0 ? rte_rand() % flow_ticks : 0;
+        ticks_t offset = i * flow_ticks_offset_inc;
         flows_timers[i] = first_tick + offset;
       }
     }

@@ -22,8 +22,8 @@
 #define DEFAULT_CRC_UNIQUE_FLOWS false
 #define DEFAULT_CRC_BITS 32
 
-#define DEFAULT_WARMUP_DURATION 5 // no warmup
-#define DEFAULT_WARMUP_RATE 1 // 1 Mbps
+#define DEFAULT_WARMUP_DURATION 0  // No warmup
+#define DEFAULT_WARMUP_RATE 1      // 1 Mbps
 
 enum {
   /* long options mapped to short options: first long only option value must
@@ -133,6 +133,11 @@ void config_init(int argc, char **argv) {
              "Insufficient number of cores (%" PRIu16
              " given, but we require at least 2).\n",
              nb_cores);
+  }
+
+  if (argc <= 1) {
+    config_print_usage(argv);
+    exit(0);
   }
 
   int opt;

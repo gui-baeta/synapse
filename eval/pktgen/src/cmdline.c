@@ -87,9 +87,6 @@ void cmd_churn(churn_fpm_t churn) {
   config.runtime.flow_ttl =
       (1e9 * (uint64_t)num_base_flows) / config.runtime.churn;
 
-  // We must divide the churn among all the workers.
-  config.runtime.flow_ttl *= config.tx.num_cores;
-
   signal_new_config();
 }
 
