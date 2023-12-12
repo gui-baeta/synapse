@@ -67,6 +67,32 @@ void packet_state_total_length(void *p, uint32_t *len)
 @*/
 
 // The main IO primitive.
+void packet_borrow_next_secret(void *p, size_t length, void **chunk)
+/*@ requires packetp(p, ?unread, ?mc) &*&
+       length <= length(unread) &*&
+       0 < length &*& length < INT_MAX &*&
+       length + borrowed_len(mc) < INT_MAX &*&
+       *chunk |-> _; @*/
+/*@ ensures *chunk |-> ?ptr &*&
+      ptr != 0 &*&
+      packetp(p, drop(length, unread), cons(pair(ptr, length), mc))
+   &*&
+      chars(ptr, length, take(length, unread)); @*/
+{
+  //@ open packetp(p, unread, mc);
+  //@ borrowed_len_nonneg(mc, p, p + borrowed_len(mc));
+  //@ assert 0 <= global_read_length;
+  //@ assert p > 0;
+  //@ assert p + global_read_length > 0;
+  // TODO: support mbuf chains.
+  *chunk = (char *)p + global_read_length;
+  //@ chars_split(*chunk, length);
+  global_read_length += length;
+  //@ assert *chunk |-> ?ptr;
+  //@ close packetp(p, drop(length, unread), cons(pair(ptr, length), mc));
+}
+
+// The main IO primitive.
 void packet_borrow_next_chunk(void *p, size_t length, void **chunk)
 /*@ requires packetp(p, ?unread, ?mc) &*&
        length <= length(unread) &*&

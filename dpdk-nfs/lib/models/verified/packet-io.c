@@ -54,6 +54,47 @@ bool packet_is_last_borrowed_chunk(void *p, void *chunk) {
          &global_chunks[(global_n_borrowed_chunks - 1) * MAX_CHUNK_SIZE];
 }
 
+void packet_borrow_next_secret(void *p, size_t length, void **chunk) {
+  // TODO: add klee_access stuff
+  klee_trace_ret();
+  klee_trace_param_u64((uint64_t)p, "p");
+  klee_trace_param_u32(length, "length");
+  klee_assert(receive_succeded);
+  klee_assert(!global_sent);
+  klee_assert(global_n_borrowed_chunks < PREALLOC_CHUNKS);
+  klee_assert(global_n_borrowed_chunks <= global_total_n_borrowed_chunks);
+  klee_assert(length < MAX_CHUNK_SIZE);
+  klee_assert(global_tot_len_borrowed + length <= global_packet_len);
+  struct ChunkLayout *layout = &global_chunk_layouts[global_n_borrowed_chunks];
+  klee_assert(layout->set);
+  void *ret = &global_chunks[global_n_borrowed_chunks * MAX_CHUNK_SIZE];
+  klee_trace_param_tagged_ptr(chunk, sizeof(void *), "chunk", layout->tname,
+                              TD_OUT);
+  klee_trace_extra_ptr(ret, layout->length, "the_chunk", layout->tname, TD_OUT);
+  for (size_t i = 0; i < layout->n_fields; ++i) {
+    klee_trace_extra_ptr_field(ret, layout->fields[i].offset,
+                               layout->fields[i].width, layout->fields[i].name,
+                               TD_OUT);
+  }
+  for (size_t i = 0; i < layout->n_nests; ++i) {
+    if (layout->nests[i].count != 1) {
+      klee_trace_extra_ptr_nested_field_arr(
+          ret, layout->nests[i].base_offset, layout->nests[i].offset,
+          layout->nests[i].width, layout->nests[i].count, layout->nests[i].name,
+          TD_OUT);
+    } else {
+      klee_trace_extra_ptr_nested_field(
+          ret, layout->nests[i].base_offset, layout->nests[i].offset,
+          layout->nests[i].width, layout->nests[i].name, TD_OUT);
+    }
+  }
+  global_chunk_lengths[global_n_borrowed_chunks] = length;
+  global_n_borrowed_chunks++;
+  global_total_n_borrowed_chunks++;
+  global_tot_len_borrowed += length;
+  *chunk = ret;
+}
+
 // The main IO primitive.
 void packet_borrow_next_chunk(void *p, size_t length, void **chunk) {
   // TODO: add klee_access stuff

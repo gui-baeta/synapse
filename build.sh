@@ -238,6 +238,7 @@ source_install_llvm() {
 
 	pushd "$LLVM_DIR"
 		CXXFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0" \
+		    CC=c-compiler CXX=c++-compiler \
 				./configure \
 					--enable-optimized \
 					--disable-assertions \

@@ -156,24 +156,24 @@ static void worker_main(void) {
         nf_process(VIGOR_DEVICE, &data, mbuf->pkt_len, VIGOR_NOW, mbuf);
     nf_return_all_chunks(data);
 
-    if (dst_device == VIGOR_DEVICE) {
-      rte_pktmbuf_free(mbuf);
-    } else if (dst_device == FLOOD_FRAME) {
-      flood(mbuf, VIGOR_DEVICES_COUNT);
-    } else {
-      // ensure we don't leak symbols into DPDK
-      concretize_devices(&dst_device, rte_eth_dev_count_avail());
-      if (rte_eth_tx_burst(dst_device, 0, &mbuf, 1) != 1) {
-#ifdef VIGOR_ALLOW_DROPS
-        rte_pktmbuf_free(mbuf);  // OK, we're debugging
-#else
-        printf(
-            "We assume the hardware will allways accept a packet to "
-            "transmit.\n");
-        abort();
-#endif
-      }
-    }
+//    if (dst_device == VIGOR_DEVICE) {
+//      rte_pktmbuf_free(mbuf);
+//    } else if (dst_device == FLOOD_FRAME) {
+//      flood(mbuf, VIGOR_DEVICES_COUNT);
+//    } else {
+//      // ensure we don't leak symbols into DPDK
+//      concretize_devices(&dst_device, rte_eth_dev_count_avail());
+//      if (rte_eth_tx_burst(dst_device, 0, &mbuf, 1) != 1) {
+//#ifdef VIGOR_ALLOW_DROPS
+//        rte_pktmbuf_free(mbuf);  // OK, we're debugging
+//#else
+//        printf(
+//            "We assume the hardware will allways accept a packet to "
+//            "transmit.\n");
+//        abort();
+//#endif
+//      }
+//    }
   }
   VIGOR_LOOP_END
 

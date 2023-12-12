@@ -107,6 +107,15 @@ char *nf_rte_ipv4_to_str(uint32_t addr);
 extern void *chunks_borrowed[];
 extern size_t chunks_borrowed_num;
 
+static inline void *nf_borrow_next_secret(uint8_t **p, size_t length) {
+  assert(chunks_borrowed_num < MAX_N_CHUNKS);
+  void *chunk;
+  packet_borrow_next_secret(*p, length, &chunk);
+  chunks_borrowed[chunks_borrowed_num] = chunk;
+  chunks_borrowed_num++;
+  return chunk;
+}
+
 static inline void *nf_borrow_next_chunk(uint8_t **p, size_t length) {
   assert(chunks_borrowed_num < MAX_N_CHUNKS);
   void *chunk;

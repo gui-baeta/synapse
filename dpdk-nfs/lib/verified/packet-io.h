@@ -28,6 +28,18 @@ struct rte_mbuf;
   @*/
 
 // The main IO primitive.
+void packet_borrow_next_secret(void *p, size_t length, void **chunk);
+/*@ requires packetp(p, ?unread, ?mc) &*&
+       length <= length(unread) &*&
+       0 < length &*& length < INT_MAX &*&
+       length + borrowed_len(mc) < INT_MAX &*&
+       *chunk |-> _; @*/
+/*@ ensures *chunk |-> ?ptr &*&
+      ptr != 0 &*&
+      packetp(p, drop(length, unread), cons(pair(ptr, length), mc)) &*&
+      chars(ptr, length, take(length, unread)); @*/
+
+// The main IO primitive.
 void packet_borrow_next_chunk(void *p, size_t length, void **chunk);
 /*@ requires packetp(p, ?unread, ?mc) &*&
        length <= length(unread) &*&

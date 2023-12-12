@@ -12,7 +12,8 @@
 	branch = synapse
 [submodule "deps/klee"]
 	path = deps/klee
-	url = https://github.com/fchamicapereira/maestro-klee
+	branch = my-changes
+	url = git@github.com:gui-baeta/yaho-klee.git
 [submodule "deps/llvm"]
 	path = deps/llvm
 	url = https://github.com/fchamicapereira/llvm-project
