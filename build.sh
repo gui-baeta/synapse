@@ -49,8 +49,6 @@ DPDK_DIR="$DEPS_DIR/dpdk"
 KLEE_DIR="$DEPS_DIR/klee"
 KLEE_UCLIBC_DIR="$DEPS_DIR/klee-uclibc"
 LLVM_DIR="$DEPS_DIR/llvm"
-MAESTRO_DIR="$DEPS_DIR/maestro"
-OCAML_DIR="$DEPS_DIR/ocaml"
 Z3_DIR="$DEPS_DIR/z3"
 
 # Checks if a variable is set in a file. If it is not in the file, add it with
@@ -105,12 +103,12 @@ source_paths_in_profile() {
 }
 
 create_paths_file() {
-	rm -f $PATHSFILE > /dev/null 2>&1 || true
-	touch $PATHSFILE
+	rm -f "$PATHSFILE" > /dev/null 2>&1 || true
+	touch "$PATHSFILE"
 }
 
 setup_python_venv() {
-	cd $SCRIPT_DIR
+	cd "$SCRIPT_DIR"
 	python3 -m venv env
 	source ./env/bin/activate
 }
@@ -296,7 +294,7 @@ source_install_klee() {
 	# shellcheck source=../paths.sh
 	. "$PATHSFILE"
 
-	pushd $KLEE_DIR
+	pushd "$KLEE_DIR"
 		./build.sh
 	popd
 

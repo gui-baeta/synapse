@@ -1,5 +1,9 @@
+---
 BasedOnStyle: Google
-IndentWidth: 2
-TabWidth: 2
+IndentWidth: 4
+TabWidth: 4
 AccessModifierOffset: -4
-SortIncludes: false
+SortIncludes: Never
+Standard: c++11
+UseTab: Never
+...
