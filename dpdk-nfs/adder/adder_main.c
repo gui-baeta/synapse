@@ -72,6 +72,7 @@ int nf_process(uint16_t device, uint8_t **buffer, uint16_t packet_length,
 //  if (secret_chunk != NULL &&
 //      secret_chunk->a <= UINT32_MAX - secret_chunk->b) {
     if (secret_chunk->a > 5) { // TODO Conditional If Module -> Set state as in a branch in EP
+//      secret_chunk->b += 1;
       secret_chunk->c += 1;
     } else {
       secret_chunk->c += 2;
