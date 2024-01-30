@@ -17,5 +17,8 @@ env
 synthesized
 /.idea/.gitignore
 **/cmake-build-debug/**
-.idea
+.idea/
 **/debug/**
+tfhe/.idea/
+
+deps/klee/main.rs
