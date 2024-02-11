@@ -73,7 +73,7 @@ int nf_process(uint16_t device, uint8_t **buffer, uint16_t packet_length,
 //      secret_chunk->a <= UINT32_MAX - secret_chunk->b) {
 
 //    for (int i = 0; i < 3; i++) {
-//      secret_chunk->a += 1;
+//      secret_chunk->c += 1;
 //    }
 
     if (secret_chunk->c > 3) {
@@ -82,8 +82,8 @@ int nf_process(uint16_t device, uint8_t **buffer, uint16_t packet_length,
 
 //    if (secret_chunk->a > 5 && secret_chunk->b > 2) {
 //      secret_chunk->c += 1;
-//      secret_chunk->b += 2;
-      secret_chunk->a += 3;
+      secret_chunk->b += 2;
+//    secret_chunk->a += 3 + + secret_chunk->b + secret_chunk->c;
 //    } else {
 //      secret_chunk->c *= 2;
 //    }
