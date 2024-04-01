@@ -14,7 +14,6 @@ env
 .DS_Store
 
 # Out files
-synthesized
 /.idea/.gitignore
 **/cmake-build-debug/**
 .idea/
