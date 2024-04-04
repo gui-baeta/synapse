@@ -80,19 +80,16 @@ int nf_process(uint16_t device, uint8_t **buffer, uint16_t packet_length,
         secret_chunk->c += 3;
     }
 
-    c = univ(a > 3 ) * (c + 3) + !univ(a > 3 ) * (c);
 
     if (secret_chunk->c > 5) {
         secret_chunk->c += 1;
     }
 
-    c = univ(c > 5 ) * (c + 1) + !univ(a > 3 ) * (c);
 
     if (secret_chunk->b > 2) {
         secret_chunk->c += 2;
     }
 
-    ...
 //    if (secret_chunk->a > 5 && secret_chunk->b > 2) {
 //      secret_chunk->c += 1;
 //    secret_chunk->a += 3 + + secret_chunk->b + secret_chunk->c;
