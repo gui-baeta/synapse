@@ -1,0 +1,23 @@
+values = [1,2,0,0,0,5,7,9,12,2,0,0]
+#  uint8_t a; man
+#  uint8_t b; age ( / 10 )
+#  uint8_t c; smoking
+#  uint8_t d; diabetic
+#  uint8_t e; high blood pressure
+#  uint8_t f; HDL cholesterol ( / 10 )
+#  uint8_t g; weigth ( / 10 )
+#  uint8_t h; height ( / 15 )
+#  uint8_t i; daily physical activity ( / 5 )
+#  uint8_t j; alcohol consumption
+#  uint8_t result;
+
+#    if a && b > 5 // if man && age(/10) > 50(/10) years
+#    if !a && b > 6 // if woman && age(/10) > 60(/10) years
+#    if c // if smoking
+#    if d // if diabetic
+#    if e // if high blood pressure
+#    if f < 4 // if HDL cholesterol(/10) < 40(/10)
+#    if g > h - 6 // if weight(/10) > height(/15) - 90(/15)
+#    if i < 6 // if daily physical activity(/5) < 30(/5)
+#    if a && j > 3 // if man && alcohol cons. > 3 glasses/day
+#    if !a && j > 2 // if !man && alcohol cons. > 2 glasses/day

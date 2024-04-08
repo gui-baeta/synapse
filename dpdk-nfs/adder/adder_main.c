@@ -14,6 +14,14 @@ struct custom_chunk_t {
   uint8_t a;
   uint8_t b;
   uint8_t c;
+  uint8_t d;
+  uint8_t e;
+  uint8_t f;
+  uint8_t g;
+  uint8_t h;
+  uint8_t i;
+  uint8_t j;
+  uint8_t result;
 };
 
 #ifdef KLEE_VERIFICATION
@@ -21,6 +29,14 @@ static struct str_field_descr custom_chunk_fields[] = {
     {offsetof(struct custom_chunk_t, a), sizeof(uint8_t), 0, "a"},
     {offsetof(struct custom_chunk_t, b), sizeof(uint8_t), 0, "b"},
     {offsetof(struct custom_chunk_t, c), sizeof(uint8_t), 0, "c"},
+    {offsetof(struct custom_chunk_t, d), sizeof(uint8_t), 0, "d"},
+    {offsetof(struct custom_chunk_t, e), sizeof(uint8_t), 0, "e"},
+    {offsetof(struct custom_chunk_t, f), sizeof(uint8_t), 0, "f"},
+    {offsetof(struct custom_chunk_t, g), sizeof(uint8_t), 0, "g"},
+    {offsetof(struct custom_chunk_t, h), sizeof(uint8_t), 0, "h"},
+    {offsetof(struct custom_chunk_t, i), sizeof(uint8_t), 0, "i"},
+    {offsetof(struct custom_chunk_t, j), sizeof(uint8_t), 0, "j"},
+    {offsetof(struct custom_chunk_t, result), sizeof(uint8_t), 0, "result"},
 };
 #endif
 
@@ -75,6 +91,17 @@ int nf_process(uint16_t device, uint8_t **buffer, uint16_t packet_length,
 //    for (int i = 0; i < 3; i++) {
 //      secret_chunk->c += 1;
 //    }
+
+    if a && b > 50 // if man && age > 50 years
+    if !a && b > 60 // if woman && age > 60 years
+    if c // if smoking
+    if d // if diabetic
+    if e // if high blood pressure
+    if f < 40 // if HDL cholesterol < 40
+    if g > h - 90 // if weight > height - 90
+    if i < 30 // if daily physical activity < 30
+    if a && j > 3 // if man && alcohol cons. > 3 glasses/day
+    if !a && j > 2 // if !man && alcohol cons. > 2 glasses/day
 
     if (secret_chunk->a > 3) {
         secret_chunk->c += 3;
