@@ -10,3 +10,5 @@ tfhe = { version = "0.4.1", features = ["integer", "boolean","shortint","x86_64-
 bincode = { version = "1.3.3", features = [] }
 config-file = "0.2.3"
 serde = "1.0.197"
+lazy_static = "1.4.0"
+

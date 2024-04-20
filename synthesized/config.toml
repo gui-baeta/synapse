@@ -1,4 +1,4 @@
-values = [1,2,0,0,0,5,7,9,12,2,0,0]
+values = [1,2,0,0,0,5,7,9,12,2,0]
 #  uint8_t a; man
 #  uint8_t b; age ( / 10 )
 #  uint8_t c; smoking

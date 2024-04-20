@@ -81,41 +81,54 @@ int nf_process(uint16_t device, uint8_t **buffer, uint16_t packet_length,
 //  struct custom_chunk_t *our_custom_chunk = parse_custom_chunk(buffer);
   struct custom_chunk_t *secret_chunk = parse_custom_secret_chunk(buffer);
 
-//  if (our_custom_chunk != NULL &&
-//      our_custom_chunk->a <= UINT32_MAX - our_custom_chunk->b) {
-//    our_custom_chunk->c = our_custom_chunk->a + our_custom_chunk->b;
-//  }
-//  if (secret_chunk != NULL &&
-//      secret_chunk->a <= UINT32_MAX - secret_chunk->b) {
+  uint8_t _result = 0;
 
-//    for (int i = 0; i < 3; i++) {
-//      secret_chunk->c += 1;
+//    //    if a && b > 5 // if man && age(/10) > 50(/10) years
+//    if (secret_chunk->a && secret_chunk->b > 5) {
+//        secret_chunk->result += 1;
+//    }
+//
+//    // if !a && b > 6 // if woman && age(/10) > 60(/10) years
+//    if (!(secret_chunk->a) && secret_chunk->b > 6) {
+//        secret_chunk->result += 1;
+//    }
+//    // if c // if smoking
+//    if (secret_chunk->c) {
+//        _result += 1;
+//    }
+//    // if d // if diabetic
+//    if (secret_chunk->d) {
+//        _result += 1;
+//    }
+//    // if e // if high blood pressure
+//    if (secret_chunk->e) {
+//        _result += 1;
+//    }
+    // if f < 4 // if HDL cholesterol(/10) < 40(/10)
+//values = [1,2,0,0,0,5,7,9,12,2,0,0]
+//          a b c d e f g h  i j l result
+    if (secret_chunk->f < 4) { // false
+        _result += 1;
+    }
+    // if g > h - 6 // if weight(/10) > height(/15) - 90(/15)
+    if (secret_chunk->g + 6 > secret_chunk->h) { // true
+        _result += 1;
+    }
+    // if i < 6 // if daily physical activity(/5) < 30(/5)
+    if (secret_chunk->i < 6) { // false
+        _result += 1;
+    }
+    // if a && j > 3 // if man && alcohol cons. > 3 glasses/day
+    if (secret_chunk->a && secret_chunk->j > 3) { // true and false -> false
+        _result += 1;
+    }
+
+    secret_chunk->result = _result;
+//    // if !a && j > 2 // if !man && alcohol cons. > 2 glasses/day
+//    if (!(secret_chunk->a) && secret_chunk->j > 2) {
+//        secret_chunk->result += 1;
 //    }
 
-    if a && b > 50 // if man && age > 50 years
-    if !a && b > 60 // if woman && age > 60 years
-    if c // if smoking
-    if d // if diabetic
-    if e // if high blood pressure
-    if f < 40 // if HDL cholesterol < 40
-    if g > h - 90 // if weight > height - 90
-    if i < 30 // if daily physical activity < 30
-    if a && j > 3 // if man && alcohol cons. > 3 glasses/day
-    if !a && j > 2 // if !man && alcohol cons. > 2 glasses/day
-
-    if (secret_chunk->a > 3) {
-        secret_chunk->c += 3;
-    }
-
-
-    if (secret_chunk->c > 5) {
-        secret_chunk->c += 1;
-    }
-
-
-    if (secret_chunk->b > 2) {
-        secret_chunk->c += 2;
-    }
 
 //    if (secret_chunk->a > 5 && secret_chunk->b > 2) {
 //      secret_chunk->c += 1;
