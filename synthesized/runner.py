@@ -26,7 +26,10 @@ def run_and_capture_time(bin_file, runs=6):
 
 def main():
     # List of main files
-    main_files = [f"main_{i}" for i in range(75)]
+    main_files = [i for i in range(0, 75, 2)]
+    main_files.append(37)
+    main_files = sorted(main_files)
+    main_files = [f"main_{i}" for i in main_files]
 
     # CSV file
     csv_file = "run_times.csv"
