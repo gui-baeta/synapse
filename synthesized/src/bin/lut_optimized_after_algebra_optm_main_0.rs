@@ -8,12 +8,9 @@ use tfhe::{
     generate_keys, set_server_key, ClientKey, ConfigBuilder, FheUint4, ServerKey,
 };
 
-use tfhe::shortint::server_key::*;
-
 use config_file::FromConfigFile;
 use serde::Deserialize;
 use lazy_static::lazy_static;
-use tfhe::core_crypto::prelude::CastInto;
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -73,7 +70,7 @@ fn main() {
 	let val7: FheUint = FheUint::encrypt(values[7], &client_key);
 	let val8: FheUint = FheUint::encrypt(values[8], &client_key);
 	let val9: FheUint = FheUint::encrypt(values[9], &client_key);
-	let val10: FheUint = FheUint::encrypt(values[10], &client_key);
+	// let val10: FheUint = FheUint::encrypt(values[10], &client_key);
 	let time = std::time::Instant::now();
 	let c1 = val0.bivariate_function(&val5, |val0, val5| if 0 != val0 && val5 >= 4 { 1 } else { 0 });
 	let c0 = val0.bivariate_function(&val5, |val0, val5| if 0 != val0 && !(val5 >= 4) { 1 } else { 0 });
@@ -89,14 +86,11 @@ fn main() {
 	let c14_0 = val8.map(|val8| if val8 >= 6 { 0 } else { 1 });
 
 	// zero
-	let mut res_1st_part = val10.clone();
-	let mut res_2nd_part = val10.clone();
-	let mut res_3rd_part = val10.clone();
-	res_1st_part = (&c2_0 << 3) | (&c4 << 2) | (&c0 << 1) | &c5;
-	res_2nd_part = (&c6 << 2) | (&c1 << 1) | &c7;
+	let res_1st_part = (&c2_0 << 3) | (&c4 << 2) | (&c0 << 1) | &c5;
+	let res_2nd_part = (&c6 << 2) | (&c1 << 1) | &c7;
 
 	// c2_0, c4, c0, c5, c6, c1, c7
-	res_1st_part = res_1st_part.bivariate_function(&res_2nd_part, |part1, part2| {
+	let res_1st_part = res_1st_part.bivariate_function(&res_2nd_part, |part1, part2| {
 		let c2_0 = (part1 >> 3) & 1;
 		let c4 = (part1 >> 2) & 1;
 		let c0 = (part1 >> 1) & 1;
@@ -111,9 +105,9 @@ fn main() {
 		(2 * c7 + c4 * c2_0) * c1;
 	});
 
-	res_3rd_part = (&c2_0 << 3) | (&c14_0 << 2) | (&c3 << 1) | &c8;
+	let res_3rd_part = (&c2_0 << 3) | (&c14_0 << 2) | (&c3 << 1) | &c8;
 	// c14_0,c3,c8
-	res_3rd_part = res_3rd_part.map(|part| {
+	let res_3rd_part = res_3rd_part.map(|part| {
 		let c2_0 = (part >> 3) & 1;
 		let c14_0 = (part >> 2) & 1;
 		let c3 = (part >> 1) & 1;
