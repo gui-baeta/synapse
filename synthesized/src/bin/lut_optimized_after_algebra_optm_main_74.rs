@@ -83,11 +83,39 @@ fn main() {
 	let c5 = val9.map(|val9| if 3 < val9 { 0 } else { 1 });
 
 
-	let val10 = (&c0_0 + &c1_0 + &c2_0) * &c3_0 +
+	let res_1st_part = (&c0_0 << 3) | (&c1_0 << 2) | (&c2_0 << 1) | &c3_0;
 
-			(1 + &c2_0 + &c1_0 + &c0_0) * &c4 * &c3 +
+	// c0_0, c1_0, c2_0, c3_0
+	let res_1st_part = res_1st_part.map(|part| {
+		let c0_0 = (part >> 3) & 1;
+		let c1_0 = (part >> 2) & 1;
+		let c2_0 = (part >> 1) & 1;
+		let c3_0 = part & 1;
 
-			(&c1_0 + &c0_0 * (&c2_0 + &c1 * &c2) + &c2_0) * &c5 * &c3;
+		return (c0_0 + c1_0 + c2_0) * c3_0;
+	});
+
+	let res_2nd_part = (&c2_0 << 3) | (&c1_0 << 2) | (&c0_0 << 1) | &c4;
+	let temp_part = (&c3 << 3) | (&c1 << 2) | (&c2 << 1) | &c5;
+
+	// c2_0, c1_0, c0_0, c4 | c3, c1, c2, c5
+	let res_2nd_part = res_2nd_part.bivariate_function(&temp_part, |part1, part2| {
+		let c2_0 = (part1 >> 3) & 1;
+		let c1_0 = (part1 >> 2) & 1;
+		let c0_0 = (part1 >> 1) & 1;
+		let c4 = part1 & 1;
+		let c3 = (part2 >> 3) & 1;
+		let c1 = (part2 >> 2) & 1;
+		let c2 = (part2 >> 1) & 1;
+		let c5 = part2 & 1;
+
+		return (1 + c2_0 + c1_0 + c0_0) * c4 * c3 +
+
+			(c1_0 + c0_0 * (c2_0 + c1 * c2) + c2_0) * c5 * c3;
+	});
+
+
+	let val10 = res_1st_part + res_2nd_part;
 
 	let elapsed_time = std::time::Instant::now() - time;
 	println!("Result:");

@@ -89,7 +89,7 @@ fn main() {
 	let res_1st_part = (&c2_0 << 3) | (&c4 << 2) | (&c0 << 1) | &c5;
 	let res_2nd_part = (&c6 << 2) | (&c1 << 1) | &c7;
 
-	// c2_0, c4, c0, c5, c6, c1, c7
+	// c2_0, c4, c0, c5 | c6, c1, c7
 	let res_1st_part = res_1st_part.bivariate_function(&res_2nd_part, |part1, part2| {
 		let c2_0 = (part1 >> 3) & 1;
 		let c4 = (part1 >> 2) & 1;
@@ -117,41 +117,7 @@ fn main() {
 		(1 + c2_0 + c14_0) * c8;
 	});
 
-
-
 	let val10 = &res_1st_part + res_3rd_part;
-    // let val10 = (1 + &c2_0) * &c4 * &c0 +
-	// 	(&c5 + &c6) * ((&c0 + &c1) * (&c2_0 + 1) + &c0) +
-	// 	(3 + &c2_0) * &c7 * &c0 +
-	// 	(2 * &c7 + &c4 * &c2_0) * &c1 +
-	//
-	// 	(&c14_0 + &c2_0) * &c3 +
-	// 	(1 + &c2_0 + &c14_0) * &c8;
-	// let val10_0 = 1 * &c6_1 * &c2_1 * &c0_1;
-	// let val10_1 = 0 * &c6_0 * &c2_1 * &c0_1;
-	// let val10_2 = 2 * &c7_1 * &c2_1 * &c0_1;
-	// let val10_3 = 1 * &c7_0 * &c2_1 * &c0_1;
-	// let val10_4 = 2 * &c6_1 * &c2_0 * &c0_1;
-	// let val10_5 = 1 * &c6_0 * &c2_0 * &c0_1;
-	// let val10_6 = 3 * &c7_1 * &c2_0 * &c0_1;
-	// let val10_7 = 2 * &c7_0 * &c2_0 * &c0_1;
-	// let val10_8 = 2 * &c6_1 * &c2_1 * &c0_0;
-	// let val10_9 = 1 * &c6_0 * &c2_1 * &c0_0;
-	// let val10_10 = 3 * &c7_1 * &c2_1 * &c0_0;
-	// let val10_11 = 2 * &c7_0 * &c2_1 * &c0_0;
-	// let val10_12 = 3 * &c6_1 * &c2_0 * &c0_0;
-	// let val10_13 = 2 * &c6_0 * &c2_0 * &c0_0;
-	// let val10_14 = 4 * &c7_1 * &c2_0 * &c0_0;
-	// let val10_15 = 3 * &c7_0 * &c2_0 * &c0_0;
-	// let val10_16 = 0 * &c14_1 * &c2_1 * &c1_1;
-	// let val10_17 = 1 * &c14_0 * &c2_1 * &c1_1;
-	// let val10_18 = 1 * &c14_1 * &c2_0 * &c1_1;
-	// let val10_19 = 2 * &c14_0 * &c2_0 * &c1_1;
-	// let val10_20 = 1 * &c14_1 * &c2_1 * &c1_0;
-	// let val10_21 = 2 * &c14_0 * &c2_1 * &c1_0;
-	// let val10_22 = 2 * &c14_1 * &c2_0 * &c1_0;
-	// let val10_23 = 3 * &c14_0 * &c2_0 * &c1_0;
-	// let val10 = val10_0 + val10_1 + val10_2 + val10_3 + val10_4 + val10_5 + val10_6 + val10_7 + val10_8 + val10_9 + val10_10 + val10_11 + val10_12 + val10_13 + val10_14 + val10_15 + val10_16 + val10_17 + val10_18 + val10_19 + val10_20 + val10_21 + val10_22 + val10_23;
 	let elapsed_time = std::time::Instant::now() - time;
 	println!("Result:");
 	println!("val0: {}", val0.decrypt(&client_key));
