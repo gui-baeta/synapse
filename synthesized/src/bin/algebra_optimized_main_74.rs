@@ -58,7 +58,6 @@ fn main() {
 	let values: &Vec<i32> = &CONFIG.values;
 
 	set_server_key(server_key);
-	// let server_key: tfhe::shortint::server_key::ServerKey = <tfhe::integer::ServerKey as Clone>::clone(&(*server_key.as_ref())).into();
 	// Packet Borrow Next Secret
 	let val0: FheUint = FheUint::encrypt(values[0], &client_key);
 	let val1: FheUint = FheUint::encrypt(values[1], &client_key);
@@ -72,52 +71,24 @@ fn main() {
 	let val9: FheUint = FheUint::encrypt(values[9], &client_key);
 	// let val10: FheUint = FheUint::encrypt(values[10], &client_key);
 	let time = std::time::Instant::now();
-	let c1 = val0.bivariate_function(&val5, |val0, val5| if 0 != val0 && val5 >= 4 { 1 } else { 0 });
-	let c0 = val0.bivariate_function(&val5, |val0, val5| if 0 != val0 && !(val5 >= 4) { 1 } else { 0 });
-	let c3 = val0.bivariate_function(&val5, |val0, val5| if !(0 != val0) && val5 >= 4 { 1 } else { 0 });
-	let c8 = val0.bivariate_function(&val5, |val0, val5| if !(0 != val0) && !(val5 >= 4) { 1 } else { 0 });
-	// let c2 = val6.bivariate_function(&val7, |val6, val7| if 6 + val6 <= val7 { 1 } else { 0 });
-	let c2_0 = val6.bivariate_function(&val7, |val6, val7| if 6 + val6 <= val7 { 0 } else { 1 });
-	let c5 = val8.bivariate_function(&val9, |val8, val9| if val8 >= 6 && 3 < val9 { 1 } else { 0 });
-	let c4 = val8.bivariate_function(&val9, |val8, val9| if val8 >= 6 && !(3 < val9) { 1 } else { 0 });
-	let c7 = val8.bivariate_function(&val9, |val8, val9| if !(val8 >= 6) && 3 < val9 { 1 } else { 0 });
-	let c6 = val8.bivariate_function(&val9, |val8, val9| if !(val8 >= 6) && !(3 < val9) { 1 } else { 0 });
-	// let c14 = val8.map(|val8| if val8 >= 6 { 1 } else { 0 });
-	let c14_0 = val8.map(|val8| if val8 >= 6 { 0 } else { 1 });
+	// let c0 = val6.bivariate_function(&val7, |val6, val7| if 6 + val6 <= val7 { 1 } else { 0 });
+	let c0_0 = val6.bivariate_function(&val7, |val6, val7| if 6 + val6 <= val7 { 0 } else { 1 });
+	let c1 = val5.map(|val5| if val5 >= 4 { 1 } else { 0 });
+	let c1_0 = val5.map(|val5| if val5 >= 4 { 0 } else { 1 });
+	let c2 = val8.map(|val8| if val8 >= 6 { 1 } else { 0 });
+	let c2_0 = val8.map(|val8| if val8 >= 6 { 0 } else { 1 });
+	let c3 = val0.map(|val0| if 0 != val0 { 1 } else { 0 });
+	let c3_0 = val0.map(|val0| if 0 != val0 { 0 } else { 1 });
+	let c4 = val9.map(|val9| if 3 < val9 { 1 } else { 0 });
+	let c5 = val9.map(|val9| if 3 < val9 { 0 } else { 1 });
 
-	// zero
-	let res_1st_part = (&c2_0 << 3) | (&c4 << 2) | (&c0 << 1) | &c5;
-	let res_2nd_part = (&c6 << 2) | (&c1 << 1) | &c7;
 
-	// c2_0, c4, c0, c5 | c6, c1, c7
-	let res_1st_part = res_1st_part.bivariate_function(&res_2nd_part, |part1, part2| {
-		let c2_0 = (part1 >> 3) & 1;
-		let c4 = (part1 >> 2) & 1;
-		let c0 = (part1 >> 1) & 1;
-		let c5 = part1 & 1;
-		let c6 = (part2 >> 2) & 1;
-		let c1 = (part2 >> 1) & 1;
-		let c7 = part2 & 1;
+	let val10 = (&c0_0 + &c1_0 + &c2_0) * &c3_0 +
 
-		return (1 + c2_0) * c4 * c0 +
-		(c5 + c6) * ((c0 + c1) * (c2_0 + 1) + c0) +
-		(3 + c2_0) * c7 * c0 +
-		(2 * c7 + c4 * c2_0) * c1;
-	});
+			(1 + &c2_0 + &c1_0 + &c0_0) * &c4 * &c3 +
 
-	let res_3rd_part = (&c2_0 << 3) | (&c14_0 << 2) | (&c3 << 1) | &c8;
-	// c14_0,c3,c8
-	let res_3rd_part = res_3rd_part.map(|part| {
-		let c2_0 = (part >> 3) & 1;
-		let c14_0 = (part >> 2) & 1;
-		let c3 = (part >> 1) & 1;
-		let c8 = part & 1;
+			(&c1_0 + &c0_0 * (&c2_0 + &c1 * &c2) + &c2_0) * &c5 * &c3;
 
-		return (c14_0 + c2_0) * c3 +
-		(1 + c2_0 + c14_0) * c8;
-	});
-
-	let val10 = &res_1st_part + res_3rd_part;
 	let elapsed_time = std::time::Instant::now() - time;
 	println!("Result:");
 	println!("val0: {}", val0.decrypt(&client_key));
