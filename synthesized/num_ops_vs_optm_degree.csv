@@ -1,0 +1,5 @@
+op_kind,main_0,main_37,main_74,algebra_optimized_main_0,algebra_optimized_main_37,algebra_optimized_main_74,lut_optimized_after_algebra_optm_main_0,lut_optimized_after_algebra_optm_main_37,lut_optimized_after_algebra_optm_main_74
+# Operations,95,117,135,26,29,17,9,10,10
+# PBSs,12,14,10,10,11,9,12,13,11
+# Bivariate PBSs,10,6,2,9,6,1,10,8,2
+# Univariate PBSs,2,8,8,1,5,8,2,5,9
